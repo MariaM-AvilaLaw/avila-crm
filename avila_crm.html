@@ -1032,7 +1032,7 @@ window.enviarCorreoAvila=function(id){
   cuerpo+='Adjunto encontrará la hoja de vida y el informe completo del proceso de selección.\n\n';
   cuerpo+='Quedo atenta para coordinar la entrevista final.\n\n';
   cuerpo+='Saludos,\nMaría Mónica\nÁvila Law Consulting · RRHH';
-  var gmailUrl='https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent('miguel.avila@avilalawconsulting.com')+'&su='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo);
+  var gmailUrl='https://mail.google.com/mail/u/0/?authuser=salesavilalawconsulting%40gmail.com&view=cm&fs=1&to='+encodeURIComponent('miguel.avila@avilalawconsulting.com')+'&su='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo);
   window.open(gmailUrl,'_blank');
 };
 window.abrirWA=function(id){
@@ -1143,9 +1143,4 @@ window.doLogin=function(){
 };
 window.doLogout=function(){localStorage.removeItem('av_session');doLogout();};
 
-init().catch(function(e){gid('loading').style.display='none';gid('login-wrap').style.display='flex';console.error(e);});
-
-})();
-</script>
-</body>
-</html>
+init().catch(function(e){gid('loading').style.display='none';gid('login-wrap').style.display='flex';conso
