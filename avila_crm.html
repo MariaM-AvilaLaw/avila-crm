@@ -1,0 +1,1154 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ávila Law — RRHH</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Source+Serif+4:wght@600;700&family=Inter:wght@400;500;600;700&display=swap');
+:root{--ink:#1c1f24;--ink2:#3a3f47;--gold:#b8924a;--golds:#e3d2ab;--cream:#f7f4ee;--white:#fff;--green:#2a7d44;--gbg:#e8f3ea;--amber:#b9842c;--abg:#faf0dd;--red:#b5453f;--rbg:#fbeae9;--line:#e4ddcd;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Inter',system-ui,sans-serif;background:var(--cream);color:var(--ink);min-height:100vh;}
+h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
+
+/* LOGIN */
+.login-wrap{min-height:100vh;display:flex;align-items:center;justify-content:center;background:var(--ink);padding:20px;}
+.login-box{background:var(--white);border-radius:16px;padding:40px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.3);}
+.login-logo{text-align:center;margin-bottom:32px;}
+.login-logo .mono{width:56px;height:56px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Source Serif 4',serif;font-size:24px;font-weight:700;color:var(--gold);margin:0 auto 12px;}
+.login-logo h2{font-size:20px;color:var(--ink);margin-bottom:4px;}
+.login-logo p{font-size:12px;color:var(--ink2);text-transform:uppercase;letter-spacing:.05em;}
+.login-field{margin-bottom:16px;}
+.login-field label{display:block;font-size:13px;font-weight:600;margin-bottom:6px;color:var(--ink2);}
+.login-field input{width:100%;padding:11px 14px;border:1px solid var(--line);border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;background:var(--cream);transition:border-color .15s;}
+.login-field input:focus{outline:none;border-color:var(--gold);}
+.login-btn{width:100%;padding:12px;background:var(--ink);color:#fff;border:none;border-radius:8px;font-family:'Inter',sans-serif;font-size:14px;font-weight:700;cursor:pointer;margin-top:8px;transition:opacity .15s;}
+.login-btn:hover{opacity:.88;}
+.login-err{background:var(--rbg);color:var(--red);border-radius:8px;padding:10px 14px;font-size:13px;margin-top:12px;display:none;}
+
+/* APP */
+.app{display:none;}
+.app.visible{display:block;}
+.topbar{background:var(--ink);padding:12px 20px;display:flex;align-items:center;justify-content:space-between;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:200;}
+.topbar-left{display:flex;align-items:center;gap:12px;}
+.topbar .mono{width:34px;height:34px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Source Serif 4',serif;font-size:15px;font-weight:700;color:var(--gold);flex-shrink:0;}
+.topbar h1{color:#fff;font-size:14px;margin-bottom:1px;}
+.topbar p{color:var(--golds);font-size:10px;text-transform:uppercase;letter-spacing:.05em;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.user-badge{font-size:11px;color:var(--golds);font-weight:600;}
+.logout-btn{background:none;border:1px solid rgba(255,255,255,.2);color:var(--golds);font-size:11px;font-weight:600;padding:5px 10px;border-radius:6px;cursor:pointer;font-family:'Inter',sans-serif;}
+.logout-btn:hover{background:rgba(255,255,255,.1);}
+.back-btn{background:none;border:none;color:var(--golds);font-size:12px;font-weight:600;cursor:pointer;font-family:'Inter',sans-serif;display:flex;align-items:center;gap:4px;}
+
+/* PANTALLA PROCESOS */
+.procesos-wrap{max-width:800px;margin:0 auto;padding:32px 20px;}
+.procesos-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:24px;}
+.procesos-header h2{font-size:22px;}
+.btn{font-family:'Inter',sans-serif;font-weight:700;font-size:13px;padding:10px 18px;border-radius:8px;border:none;cursor:pointer;background:var(--ink);color:#fff;transition:opacity .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn:hover{opacity:.88;}
+.btn.gold{background:var(--gold);}
+.btn.green{background:var(--green);}
+.btn.ghost{background:transparent;color:var(--ink2);border:1px solid var(--line);}
+.btn.sm{font-size:12px;padding:7px 13px;}
+.btn.red{background:var(--red);}
+.proceso-card{background:var(--white);border:1px solid var(--line);border-radius:12px;padding:20px 24px;margin-bottom:12px;display:flex;justify-content:space-between;align-items:center;gap:16px;cursor:pointer;transition:box-shadow .15s;border-left:4px solid var(--gold);}
+.proceso-card:hover{box-shadow:0 4px 16px rgba(0,0,0,.1);}
+.proceso-card.active{border-left-color:var(--green);}
+.proceso-info h3{font-size:16px;margin-bottom:4px;}
+.proceso-info p{font-size:12px;color:var(--ink2);}
+.proceso-stats{display:flex;gap:16px;flex-shrink:0;}
+.proceso-stat{text-align:center;}
+.proceso-stat .n{font-family:'Source Serif 4',serif;font-size:20px;font-weight:700;display:block;color:var(--ink);}
+.proceso-stat .l{font-size:10px;color:var(--ink2);text-transform:uppercase;}
+.empty-procesos{text-align:center;padding:60px 20px;color:var(--ink2);}
+.empty-procesos h3{font-size:18px;margin-bottom:8px;}
+
+/* MODAL NUEVO PROCESO */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:600;display:none;align-items:center;justify-content:center;padding:20px;}
+.modal-bg.open{display:flex;}
+.modal-box{background:var(--white);border-radius:12px;padding:28px;width:100%;max-width:480px;}
+.modal-box h3{font-size:18px;margin-bottom:20px;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:13px;font-weight:600;margin-bottom:5px;}
+.field input,.field select,.field textarea{width:100%;padding:9px 12px;border:1px solid var(--line);border-radius:7px;font-family:'Inter',sans-serif;font-size:13.5px;background:var(--cream);}
+.btn-row{display:flex;gap:10px;margin-top:20px;}
+
+/* CRM TABS */
+.crm-tabs{display:flex;overflow-x:auto;background:var(--white);border-bottom:1px solid var(--line);scrollbar-width:none;}
+.crm-tabs::-webkit-scrollbar{display:none;}
+.tab-btn{flex-shrink:0;padding:11px 18px;border:none;background:none;font-family:'Source Serif 4',serif;font-size:13px;font-weight:600;color:var(--ink2);border-bottom:3px solid transparent;cursor:pointer;white-space:nowrap;}
+.tab-btn.on{color:var(--ink);border-bottom-color:var(--gold);}
+.tab-btn .ct{display:inline-block;background:var(--golds);color:var(--ink);font-size:10px;font-weight:700;border-radius:10px;padding:1px 6px;margin-left:4px;}
+.tab-btn.on .ct{background:var(--gold);color:#fff;}
+.crm-body{max-width:900px;margin:0 auto;padding:20px 16px 80px;}
+
+/* KANBAN */
+.kanban-wrap{padding:16px;overflow-x:auto;min-height:calc(100vh-130px);}
+.kanban-board{display:flex;gap:14px;min-width:max-content;align-items:flex-start;padding-bottom:40px;}
+.kb-col{width:270px;flex-shrink:0;}
+.kb-col-head{border-radius:10px 10px 0 0;padding:10px 14px;display:flex;justify-content:space-between;align-items:center;}
+.kb-col-head h3{font-size:13px;font-weight:700;color:#fff;margin:0;}
+.kb-col-head .col-ct{font-size:11px;font-weight:700;background:rgba(255,255,255,.18);padding:2px 8px;border-radius:10px;color:#fff;}
+.kb-col-body{background:rgba(28,31,36,.04);border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;padding:10px;min-height:200px;display:flex;flex-direction:column;gap:8px;transition:background .15s}
+.kb-col-body.drag-over{background:rgba(184,146,74,.15);outline:2px dashed var(--gold);outline-offset:-2px}
+.kb-card.dragging{opacity:.4}
+.kb-card{cursor:grab}
+.kb-card.dragging{cursor:grabbing}
+.kb-card{background:var(--white);border:1px solid var(--line);border-radius:8px;overflow:hidden;cursor:pointer;transition:box-shadow .15s;border-left:4px solid var(--gold);}
+.kb-card:hover{box-shadow:0 3px 12px rgba(0,0,0,.12);}
+.kb-card.s-interview{border-left-color:#5a3fbf;}
+.kb-card.s-psic{border-left-color:#2a8f9e;}
+.kb-card.s-final{border-left-color:var(--green);}
+.kb-card.s-desc{border-left-color:var(--red);opacity:.75;}
+.kb-card-bar{height:3px;background:var(--cream);}
+.kb-card-top{padding:10px 12px 8px;}
+.kb-card-name{font-family:'Source Serif 4',serif;font-size:13px;font-weight:700;color:var(--ink);margin-bottom:3px;line-height:1.3;}
+.kb-card-scores{display:flex;gap:4px;padding:0 12px 8px;flex-wrap:wrap;}
+.kb-score-pill{font-size:10px;font-weight:700;padding:2px 7px;border-radius:8px;background:var(--cream);color:var(--ink2);}
+.kb-score-pill.g{background:var(--gbg);color:var(--green);}
+.kb-score-pill.a{background:var(--abg);color:var(--amber);}
+.kb-score-pill.r{background:var(--rbg);color:var(--red);}
+
+/* MODAL CANDIDATO */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:500;display:none;align-items:flex-start;justify-content:flex-end;}
+.modal-overlay.open{display:flex;}
+.modal-drawer{width:min(580px,100vw);height:100vh;background:var(--white);overflow-y:auto;box-shadow:-4px 0 32px rgba(0,0,0,.18);display:flex;flex-direction:column;}
+.modal-head{background:var(--ink);padding:16px 18px;display:flex;justify-content:space-between;align-items:flex-start;gap:12px;border-bottom:3px solid var(--gold);position:sticky;top:0;z-index:10;}
+.modal-head h2{font-family:'Source Serif 4',serif;font-size:17px;color:#fff;margin:0;}
+.close-btn{background:none;border:none;color:var(--golds);font-size:22px;cursor:pointer;line-height:1;}
+.modal-body{padding:18px;flex:1;}
+.modal-section{margin-bottom:20px;}
+.modal-section-title{font-family:'Source Serif 4',serif;font-size:14px;font-weight:700;color:var(--ink);border-bottom:2px solid var(--gold);padding-bottom:6px;margin-bottom:12px;}
+.history-item{padding:10px 12px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;background:#fffdf9;}
+.modal-actions{padding:14px 18px;border-top:1px solid var(--line);background:var(--cream);display:flex;gap:8px;flex-wrap:wrap;}
+.badge{display:inline-block;font-size:11px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap;}
+.badge.green{background:var(--gbg);color:var(--green);}
+.badge.amber{background:var(--abg);color:var(--amber);}
+.badge.red{background:var(--rbg);color:var(--red);}
+.badge.grey{background:#f0f0f0;color:#888;}
+
+/* PREFILTRO */
+.card{background:var(--white);border:1px solid var(--line);border-radius:10px;padding:18px 20px;margin-bottom:16px;}
+.tip{background:var(--cream);border-left:3px solid var(--gold);padding:10px 12px;border-radius:6px;font-size:13px;color:var(--ink2);margin:12px 0;}
+.ai-bar{background:var(--abg);border:1px solid var(--golds);border-radius:8px;padding:12px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:14px;}
+.ai-bar p{font-size:13px;color:var(--amber);font-weight:600;}
+.cand-card{border:1px solid var(--line);border-radius:9px;overflow:hidden;margin-bottom:12px;background:var(--white);}
+.cand-top{padding:13px 16px;display:flex;justify-content:space-between;align-items:flex-start;gap:10px;flex-wrap:wrap;}
+.cand-name{font-family:'Source Serif 4',serif;font-size:15px;font-weight:600;}
+.cand-acts{padding:8px 16px 12px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;border-top:1px dashed var(--line);}
+.lbtn{background:none;border:none;color:#2a8f9e;font-size:12.5px;font-weight:600;cursor:pointer;padding:0;font-family:'Inter',sans-serif;}
+.lbtn:hover{text-decoration:underline;}
+.lbtn.red{color:var(--red);}
+.cand-detail{padding:12px 16px;background:#fffdf9;border-top:1px solid var(--line);display:none;}
+.cand-detail.open{display:block;}
+.dl{font-size:12.5px;margin-bottom:6px;padding-left:8px;border-left:2px solid var(--line);}
+.dl b{color:var(--ink);display:block;}
+.dl span{color:var(--ink2);}
+
+/* ENTREVISTA FORM */
+.form-cvsumm{background:var(--gbg);border:1px solid var(--green);border-radius:8px;padding:12px 14px;margin-bottom:14px;font-size:13px;}
+.cat-block{border:1px solid var(--line);border-radius:8px;padding:13px 15px;margin-bottom:12px;background:#fffdf9;}
+.cat-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;padding-bottom:8px;border-bottom:1px solid var(--line);}
+.cat-head h4{font-size:14px;}
+.wt{font-size:10.5px;font-weight:700;color:var(--gold);background:var(--golds);padding:2px 7px;border-radius:10px;}
+.qblock{margin-bottom:12px;padding-bottom:12px;border-bottom:1px dashed var(--line);}
+.qblock:last-child{border-bottom:none;margin-bottom:0;padding-bottom:0;}
+.qtxt{font-size:13.5px;font-weight:600;margin-bottom:2px;}
+.qmeta{font-size:11.5px;color:var(--ink2);margin-bottom:5px;}
+.qanswer{width:100%;min-height:44px;padding:8px;border:1px solid var(--line);border-radius:6px;font-family:'Inter',sans-serif;font-size:13.5px;resize:vertical;background:var(--cream);}
+.qrat-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-top:4px;}
+.qrat-row label{font-size:11.5px;font-weight:600;color:var(--ink2);}
+.qrat-row select{padding:5px 8px;border:1px solid var(--line);border-radius:5px;font-size:13px;}
+.ai-note-txt{font-size:11px;color:#2a8f9e;font-style:italic;}
+.elim{display:flex;align-items:flex-start;gap:8px;padding:8px 11px;background:var(--cream);border-radius:7px;margin-bottom:7px;font-size:13.5px;}
+.elim input{margin-top:2px;width:15px;height:15px;flex-shrink:0;}
+
+/* GESTION */
+.gest-summary{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px;}
+.gest-kpi{flex:1;min-width:80px;background:var(--white);border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center;border-top:3px solid var(--gold);}
+.gest-kpi .kn{font-family:'Source Serif 4',serif;font-size:22px;font-weight:700;display:block;}
+.gest-kpi .kl{font-size:10.5px;color:var(--ink2);text-transform:uppercase;letter-spacing:.03em;}
+
+/* LOADING */
+.loading-screen{position:fixed;inset:0;background:var(--ink);display:flex;align-items:center;justify-content:center;z-index:1000;flex-direction:column;gap:16px;}
+.loading-screen .mono{width:56px;height:56px;border-radius:50%;border:2px solid var(--gold);display:flex;align-items:center;justify-content:center;font-family:'Source Serif 4',serif;font-size:24px;font-weight:700;color:var(--gold);}
+.loading-screen p{color:var(--golds);font-size:13px;}
+.spinner{width:24px;height:24px;border:3px solid rgba(184,146,74,.3);border-top-color:var(--gold);border-radius:50%;animation:spin .8s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.sync-indicator{position:fixed;bottom:20px;left:20px;background:var(--ink);color:var(--golds);font-size:11px;font-weight:600;padding:6px 12px;border-radius:20px;z-index:999;display:none;align-items:center;gap:6px;}
+.sync-indicator.visible{display:flex;}
+.sync-dot{width:6px;height:6px;background:var(--gold);border-radius:50%;animation:pulse 1s infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+
+@media(max-width:600px){.crm-body{padding:14px 10px 70px;}.proceso-stats{display:none;}}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div class="loading-screen" id="loading">
+  <div class="mono">A</div>
+  <div class="spinner"></div>
+  <p>Cargando...</p>
+</div>
+
+<!-- SYNC INDICATOR -->
+<div class="sync-indicator" id="sync-ind">
+  <div class="sync-dot"></div>
+  Guardando...
+</div>
+
+<!-- LOGIN -->
+<div class="login-wrap" id="login-wrap" style="display:none">
+  <div class="login-box">
+    <div class="login-logo">
+      <div class="mono">A</div>
+      <h2>Ávila Law Consulting</h2>
+      <p>Sistema de Selección RRHH</p>
+    </div>
+    <div class="login-field">
+      <label>Correo electrónico</label>
+      <input type="email" id="login-email" placeholder="correo@avilalawconsulting.com" autocomplete="email">
+    </div>
+    <div class="login-field">
+      <label>Contraseña</label>
+      <input type="password" id="login-pass" placeholder="••••••••••" autocomplete="current-password">
+    </div>
+    <button class="login-btn" onclick="doLogin()">Ingresar</button>
+    <div class="login-err" id="login-err">Correo o contraseña incorrectos.</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div class="app" id="app">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="mono">A</div>
+      <div>
+        <h1>Ávila Law — RRHH</h1>
+        <p id="topbar-sub">Sistema de Selección</p>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <span class="user-badge" id="user-badge"></span>
+      <button class="logout-btn" onclick="doLogout()">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA PROCESOS -->
+  <div id="screen-procesos" style="display:none">
+    <div class="procesos-wrap">
+      <div class="procesos-header">
+        <h2>Procesos de Selección</h2>
+        <button class="btn gold" onclick="abrirModalProceso()">+ Nuevo proceso</button>
+      </div>
+      <div id="lista-procesos"></div>
+    </div>
+  </div>
+
+  <!-- PANTALLA CRM -->
+  <div id="screen-crm" style="display:none">
+    <div style="background:var(--white);border-bottom:1px solid var(--line);padding:8px 16px;display:flex;align-items:center;gap:12px;">
+      <button class="back-btn" onclick="volverAProcesos()">← Procesos</button>
+      <span style="color:var(--line)">|</span>
+      <span id="proceso-titulo" style="font-size:13px;font-weight:600;color:var(--ink)"></span>
+    </div>
+    <div class="crm-tabs" id="crm-tabs"></div>
+    <div id="crm-main"></div>
+  </div>
+</div>
+
+<!-- MODAL NUEVO PROCESO -->
+<div class="modal-bg" id="modal-proceso">
+  <div class="modal-box">
+    <h3>Nuevo proceso de selección</h3>
+    <div class="field"><label>Cargo</label><input type="text" id="np-cargo" placeholder="Ej: Dependiente Judicial"></div>
+    <div class="field"><label>Modalidad</label><select id="np-modalidad"><option>Medio tiempo</option><option>Tiempo completo</option><option>Contrato</option><option>Pasantía</option></select></div>
+    <div class="field"><label>Área</label><input type="text" id="np-area" placeholder="Ej: Litigio Civil"></div>
+    <div class="field"><label>Descripción (opcional)</label><textarea id="np-desc" rows="2" placeholder="Notas sobre el proceso..."></textarea></div>
+    <div class="btn-row">
+      <button class="btn gold" onclick="crearProceso()">Crear proceso</button>
+      <button class="btn ghost" onclick="cerrarModalProceso()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL CANDIDATO -->
+<div class="modal-overlay" id="modal-overlay" onclick="closeModal(event)">
+  <div class="modal-drawer">
+    <div class="modal-head"><h2 id="modal-name">Candidato</h2><button class="close-btn" onclick="closeModalDirect()">&#10005;</button></div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-actions" id="modal-actions"></div>
+  </div>
+</div>
+
+<script>
+(function(){
+/* ══ CONFIG ══ */
+var SB_URL='https://giyzroybmfokpswzxhoi.supabase.co';
+var SB_KEY='sb_publishable_158owxdQNNPbgKKptc96ww_1w7qk7rF';
+var USERS={
+  'salesavilalawconsulting@gmail.com':{pass:'MmAvilaLaw0715*',name:'Maria Monica'},
+  'miguel.avila@avilalawconsulting.com':{pass:'MaAvilaLaw1010*',name:'Dr. Avila'}
+};
+
+/* ══ PREGUNTAS ══ */
+var Q={
+  log1:{t:'Reside en Bogota o tiene facilidad de traslado a la oficina?',m:'Viabilidad logistica.'},
+  log2:{t:'Cual es su expectativa salarial para este cargo?',m:'Alineacion presupuestal.'},
+  log3:{t:'En cuanto tiempo podria incorporarse?',m:'Disponibilidad de incorporacion.'},
+  tr1:{t:'Cuenteme su trayectoria profesional.',m:'Coherencia y relevancia del recorrido.'},
+  tr2:{t:'Que experiencia tiene en derecho privado o en procesos judiciales?',m:'Pertinencia directa al cargo.'},
+  tr3:{t:'Que lo motiva a buscar un nuevo reto laboral?',m:'Motivacion y estabilidad.'},
+  mot1:{t:'Que le llamo la atencion de esta vacante y por que le interesa Avila Law?',m:'Motivacion genuina e investigacion previa.'},
+  mot2:{t:'Que sabe de las areas de practica de la firma?',m:'Preparacion e interes.'},
+  bl1:{t:'Cuenteme una situacion en la que gestiono varias tareas a la vez.',m:'Gestion del tiempo y priorizacion.'},
+  bl2:{t:'Describa una situacion en la que tomo la iniciativa sin que se lo pidieran.',m:'Proactividad y criterio.'},
+  bl3:{t:'Como maneja la presion de plazos ajustados o terminos estrictos?',m:'Tolerancia al estres y resiliencia.'},
+  bl4:{t:'Como describiria su nivel de responsabilidad frente a compromisos y horarios?',m:'Confiabilidad y etica de trabajo.'},
+  pc1:{t:'La firma acepta representar a un cliente cuestionado publicamente. El caso es juridicamente viable. Como actuaria?',m:'Neutralidad profesional y madurez.'},
+  pc2:{t:'Como garantiza un trato profesional cuando no comparte la vision del cliente?',m:'Pluralismo, autocontrol y profesionalismo.'},
+  pc3:{t:'Si el abogado a cargo le indica una posicion juridica con la que no esta de acuerdo, como lo manejaria?',m:'Jerarquia profesional, criterio sin insubordinacion.'},
+  com1:{t:'OBSERVACIONAL: Evalue la claridad, fluidez y precision al expresarse.',m:'Comunicacion oral y vocabulario juridico.'},
+  com2:{t:'OBSERVACIONAL: Evalue la actitud general y coherencia con la hoja de vida.',m:'Congruencia, postura profesional e interes genuino.'}
+};
+var CATS=[
+  {id:'log',label:'Condiciones y Logistica',w:10,qs:['log1','log2','log3']},
+  {id:'tr',label:'Perfil y Trayectoria',w:15,qs:['tr1','tr2','tr3']},
+  {id:'mot',label:'Motivacion e Interes',w:10,qs:['mot1','mot2']},
+  {id:'bl',label:'Competencias Blandas',w:25,qs:['bl1','bl2','bl3','bl4']},
+  {id:'pc',label:'Neutralidad y Perfil de Practica',w:20,qs:['pc1','pc2','pc3']},
+  {id:'com',label:'Comunicacion y Actitud',w:20,qs:['com1','com2']}
+];
+
+/* ══ STATE ══ */
+var currentUser=null;
+var procesos=[];
+var currentProceso=null;
+var cands=[];
+var tab='pipeline';
+var formId=null;
+var psicFiles={};
+var modalId=null;
+
+/* ══ UTILS ══ */
+function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
+function gid(i){return document.getElementById(i);}
+function nowStr(){return new Date().toLocaleDateString('es-CO',{year:'numeric',month:'short',day:'numeric'});}
+function scoreClass(n){return n>=75?'g':n>=55?'a':'r';}
+function vColor(v){return v==='apto'?'var(--green)':v==='reservas'?'var(--amber)':'var(--red)';}
+function vClass(v){return v==='apto'?'g':v==='reservas'?'a':'r';}
+function cvBadge(v){var m={citar:'green',revisar:'amber',no_citar:'red'};return m[v]||'grey';}
+function cvLabel(v){var m={citar:'Citar a entrevista',revisar:'Revisar',no_citar:'No citar'};return m[v]||v;}
+function composite(c){
+  var cv=c.cv&&typeof c.cv.puntaje==='number'?c.cv.puntaje:0;
+  var ent=(c.interview&&c.interview.total!=null)?c.interview.total:null;
+  var psic=null;if(c.psic&&c.psic.done){psic=c.psic.recomendacion==='Avanzar'?100:c.psic.recomendacion==='Revisar'?60:20;}
+  if(psic!=null&&ent!=null)return Math.round(cv*0.2+ent*0.5+psic*0.3);
+  if(ent!=null)return Math.round(cv*0.35+ent*0.65);
+  return cv;
+}
+function showSync(){var el=gid('sync-ind');if(el){el.classList.add('visible');setTimeout(function(){el.classList.remove('visible');},2000);}}
+
+/* ══ SUPABASE ══ */
+async function sbGet(table){
+  var r=await fetch(SB_URL+'/rest/v1/'+table+'?select=*',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  if(!r.ok)throw new Error('Error cargando datos');
+  return r.json();
+}
+async function sbUpsert(table,data){
+  var r=await fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify(data)});
+  if(!r.ok)throw new Error('Error guardando datos');
+  showSync();
+}
+async function sbDelete(table,id){
+  await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+}
+
+async function cargarProcesos(){
+  var rows=await sbGet('Candidatos');
+  var map={};
+  rows.forEach(function(row){
+    if(row.data&&row.data.tipo==='proceso'){
+      map[row.id]=row.data;
+      map[row.id]._sbid=row.id;
+    }
+  });
+  procesos=Object.values(map).sort(function(a,b){return(b.creadoEn||'').localeCompare(a.creadoEn||'');});
+}
+
+async function cargarCandidatos(procesoId){
+  var rows=await sbGet('Candidatos');
+  cands=rows.filter(function(r){return r.data&&r.data.tipo==='candidato'&&r.data.procesoId===procesoId;}).map(function(r){var d=r.data;d._sbid=r.id;return d;});
+}
+
+async function guardarProceso(p){
+  await sbUpsert('Candidatos',[{id:p._sbid||undefined,data:Object.assign({},p,{tipo:'proceso'})}]);
+}
+
+async function guardarCandidato(c){
+  await sbUpsert('Candidatos',[{id:c._sbid||undefined,data:Object.assign({},c,{tipo:'candidato',procesoId:currentProceso._id})}]);
+}
+
+async function saveCands(){
+  showSync();
+  for(var i=0;i<cands.length;i++){
+    await guardarCandidato(cands[i]);
+  }
+}
+
+function findCand(id){return cands.find(function(c){return c.id===id;});}
+
+/* ══ LOGIN ══ */
+function doLogin(){
+  var email=(gid('login-email').value||'').trim().toLowerCase();
+  var pass=gid('login-pass').value||'';
+  var u=USERS[email];
+  var errEl=gid('login-err');
+  if(!u||u.pass!==pass){errEl.style.display='block';return;}
+  errEl.style.display='none';
+  currentUser={email:email,name:u.name};
+  gid('user-badge').textContent=u.name;
+  gid('login-wrap').style.display='none';
+  gid('app').classList.add('visible');
+  mostrarProcesos();
+}
+window.doLogin=doLogin;
+gid('login-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
+
+function doLogout(){
+  currentUser=null;currentProceso=null;cands=[];procesos=[];
+  gid('app').classList.remove('visible');
+  gid('login-wrap').style.display='flex';
+  gid('login-email').value='';gid('login-pass').value='';
+}
+window.doLogout=doLogout;
+
+/* ══ PANTALLA PROCESOS ══ */
+async function mostrarProcesos(){
+  gid('screen-crm').style.display='none';
+  gid('screen-procesos').style.display='block';
+  gid('topbar-sub').textContent='Sistema de Seleccion';
+  try{await cargarProcesos();}catch(e){console.warn(e);}
+  renderProcesos();
+}
+window.volverAProcesos=mostrarProcesos;
+
+function renderProcesos(){
+  var cont=gid('lista-procesos');
+  if(!procesos.length){
+    cont.innerHTML='<div class="empty-procesos"><h3>No hay procesos activos</h3><p style="font-size:13px;margin-top:8px">Crea tu primer proceso de seleccion</p></div>';
+    return;
+  }
+  cont.innerHTML=procesos.map(function(p){
+    var total=p.totalCands||0,final=p.finalCands||0;
+    return '<div class="proceso-card'+(p.estado==='activo'?' active':'')+'" onclick="abrirProceso(\''+p._id+'\')">'
+      +'<div class="proceso-info"><h3>'+esc(p.cargo)+'</h3><p>'+esc(p.modalidad)+(p.area?' · '+esc(p.area):'')+' · '+(p.creadoEn||'')+'</p></div>'
+      +'<div class="proceso-stats"><div class="proceso-stat"><span class="n">'+total+'</span><span class="l">Candidatos</span></div><div class="proceso-stat"><span class="n" style="color:var(--green)">'+final+'</span><span class="l">Finalistas</span></div></div>'
+      +'</div>';
+  }).join('');
+}
+
+function abrirModalProceso(){gid('modal-proceso').classList.add('open');}
+window.abrirModalProceso=abrirModalProceso;
+function cerrarModalProceso(){gid('modal-proceso').classList.remove('open');}
+window.cerrarModalProceso=cerrarModalProceso;
+
+async function crearProceso(){
+  var cargo=gid('np-cargo').value.trim();
+  if(!cargo){alert('Ingresa el nombre del cargo.');return;}
+  var p={_id:'proc-'+Date.now(),tipo:'proceso',cargo:cargo,modalidad:gid('np-modalidad').value,area:gid('np-area').value.trim(),descripcion:gid('np-desc').value.trim(),estado:'activo',creadoEn:nowStr(),totalCands:0,finalCands:0};
+  await guardarProceso(p);
+  cerrarModalProceso();
+  gid('np-cargo').value='';gid('np-area').value='';gid('np-desc').value='';
+  await cargarProcesos();
+  renderProcesos();
+}
+window.crearProceso=crearProceso;
+
+async function abrirProceso(id){
+  var p=procesos.find(function(x){return x._id===id;});
+  if(!p)return;
+  currentProceso=p;
+  gid('proceso-titulo').textContent=p.cargo+' — '+p.modalidad;
+  gid('topbar-sub').textContent=p.cargo;
+  gid('screen-procesos').style.display='none';
+  gid('screen-crm').style.display='block';
+  try{await cargarCandidatos(p._id);}catch(e){console.warn(e);cands=[];}
+
+  // Migrar datos existentes del proceso de Dep. Judicial si esta vacio
+  if(cands.length===0&&p.cargo.toLowerCase().indexOf('dependiente')>=0){
+    cands=getSeedCands();
+    await saveCands();
+  }
+  tab='pipeline';formId=null;
+  render();
+}
+window.abrirProceso=abrirProceso;
+
+/* ══ SEED DATA ══ */
+function getSeedCands(){
+  var DIA='22 jun 2026';
+  return [
+    {id:'s1',stage:'cv',nombre:'Carlos Andres Rincon Granados',fileName:'HV Carlos Rincon.pdf',analizadoEn:DIA,cv:{puntaje:88,veredicto:'citar',titulo:'si',tarjeta:'si',anosExp:2,telefono:'3209972880',email:'carlos.rincon254@gmail.com',experiencia:'Abogado procesalista en Contraloria de Tunja 2024-2025. 0 caducidades, 0 hallazgos en auditoria.',justificacion:'TP vigente confirmada. Perfil mas metodico del lote.',alertas:['Confirmar pretension salarial.']}},
+    {id:'s2',stage:'cv',nombre:'Laura Gisell Rodriguez Perez',fileName:'HV Laura Gisell.pdf',analizadoEn:DIA,cv:{puntaje:88,veredicto:'citar',titulo:'si',tarjeta:'si',anosExp:3,telefono:'3115432019',email:'lauragisell894@gmail.com',experiencia:'Abogada junior en Capital Law Group may-jun 2026: memoriales, contestaciones, plataformas SAMAI, SIUGJ.',justificacion:'TP 462372 vigente. Experiencia reciente directamente relevante.',alertas:['Confirmar disponibilidad.']}},
+    {id:'s3',stage:'cv',nombre:'Tatiana Carolina Bustos Rodriguez',fileName:'HV Tatiana Bustos.pdf',analizadoEn:DIA,cv:{puntaje:85,veredicto:'citar',titulo:'si',tarjeta:'si',anosExp:4,telefono:'3057374082',email:'tbustosrodriguez8@gmail.com',experiencia:'Abogada auxiliar en Bejarano y Ricaurte. Magister en Derecho Procesal Externado 2025.',justificacion:'Perfil academico y operativo mas alto del lote.',alertas:['Confirmar pretension salarial.']}},
+    {id:'s4',stage:'cv',nombre:'Dayanna Cabrales Perez',fileName:'HV Dayanna Cabrales.pdf',analizadoEn:DIA,cv:{puntaje:83,veredicto:'citar',titulo:'si',tarjeta:'si',anosExp:2,telefono:'3215635698',email:'dayannacabrales15@gmail.com',experiencia:'Consultora juridica en LEGEA GROUP 2025-actual: demandas ejecutivas.',justificacion:'TP vigente confirmada.',alertas:['Confirmar disponibilidad.']}},
+    {id:'s5',stage:'cv',nombre:'Viviam Patricia Rodriguez Delgadillo',fileName:'HV Viviam Rodriguez.pdf',analizadoEn:DIA,cv:{puntaje:76,veredicto:'citar',titulo:'no',tarjeta:'no',anosExp:4,telefono:'3173188811',email:'viviamrodriguezd@hotmail.com',experiencia:'4 anos como Dependiente Judicial en INVERST: procesos civiles, ejecutivos, hipotecarios.',justificacion:'Perfil operativo mas fuerte. Sin titulo ni TP aun.',alertas:['Sin titulo ni TP aun, verificar si la firma acepta esta condicion.']}},
+    {id:'s6',stage:'cv',nombre:'Mariana Mendoza Cortes',fileName:'HV Mariana Mendoza.pdf',analizadoEn:DIA,cv:{puntaje:80,veredicto:'citar',titulo:'no_indicado',tarjeta:'si',anosExp:1,telefono:'3123360985',email:'mendozacortesmariana@gmail.com',experiencia:'Dependiente judicial en Caballero Sierra Abogados mar-jun 2026. Licencia temporal vigente CSJ.',justificacion:'Licencia temporal vigente equivalente a TP Provisional.',alertas:['Confirmar pretension salarial.']}},
+    {id:'s7',stage:'cv',nombre:'Jorge Luis Rodriguez Moreno',fileName:'HV Jorge Rodriguez.pdf',analizadoEn:DIA,cv:{puntaje:79,veredicto:'citar',titulo:'si',tarjeta:'si',anosExp:10,telefono:'3242992389',email:'jolurodriguezmoreno@gmail.com',experiencia:'12+ anos como dependiente judicial y abogado para Finanzauto, Davivienda, Asofondos. Actualmente en TABOR ASESORES.',justificacion:'La experiencia mas amplia del lote.',alertas:['Confirmar disponibilidad, actualmente en TABOR ASESORES.']}},
+    {id:'s8',stage:'cv',nombre:'Leidy Mariana Ramirez Torres',fileName:'HV Leidy Ramirez.pdf',analizadoEn:DIA,cv:{puntaje:78,veredicto:'citar',titulo:'si',tarjeta:'si',anosExp:2,telefono:'3114709173',email:'ramireztorresmariana484@gmail.com',experiencia:'Abogada U. Catolica. Consultorio juridico: tutelas, procesos civiles, laborales y de familia.',justificacion:'TP vigente. Formacion en derecho privado.',alertas:['Confirmar pretension salarial.']}},
+    {id:'s9',stage:'cv',nombre:'Laura Gabriela Castiblanco Pena',fileName:'HV Laura Castiblanco.pdf',analizadoEn:DIA,cv:{puntaje:77,veredicto:'citar',titulo:'si',tarjeta:'si',anosExp:2,telefono:'3195297624',email:'laurapenacas@gmail.com',experiencia:'AECSA jun 2024-ene 2026: demandas ejecutivas, contestaciones, sustanciacion.',justificacion:'TP confirmada por ejercicio activo.',alertas:['Confirmar pretension salarial.']}},
+    {id:'s10',stage:'cv',nombre:'Maria Gabriela Prado Castillo',fileName:'HV Maria Gabriela Prado.pdf',analizadoEn:DIA,cv:{puntaje:56,veredicto:'revisar',titulo:'si',tarjeta:'no_indicado',anosExp:4,telefono:'3013192842',email:'mariagpradocastillo@gmail.com',experiencia:'Auxiliar Judicial Juzgado de Familia. Tribunal Superior Judicatura.',justificacion:'Experiencia judicial relevante pero en Santa Marta.',alertas:['Confirmar disponibilidad para Bogota.']}},
+    {id:'s27',stage:'cv',nombre:'Brian Fabian Vega Tapiero',fileName:'HV Brian Vega.pdf',analizadoEn:DIA,cv:{puntaje:15,veredicto:'no_citar',titulo:'no',tarjeta:'no',anosExp:0,telefono:null,email:null,experiencia:'Estudiante de Derecho de 4 semestre.',justificacion:'No es egresado. Sin titulo ni tarjeta profesional.',alertas:['No cumple requisito de egresado.']}},
+    {id:'s33',stage:'cv',nombre:'Daniel Fernando Cadena Polanco',fileName:'HV Daniel Cadena.pdf',analizadoEn:DIA,cv:{puntaje:72,veredicto:'citar',titulo:'si',tarjeta:'si',anosExp:2,telefono:'3212418264',email:'danielcadena1825@gmail.com',experiencia:'Abogado titulado UMNG jun 2025, TP 458809 vigente. Contratista judicial DISTIRA EMPRESARIAL.',justificacion:'TP vigente confirmada, titulo, Bogota y experiencia judicial activa.',alertas:['Confirmar disponibilidad.']}}
+  ];
+}
+
+/* ══ CV ANALYSIS ══ */
+async function callAI(msgs,max){
+  var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:max||1500,messages:msgs})});
+  if(!r.ok)throw new Error('Error '+r.status);
+  var d=await r.json();
+  return(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').replace(/```json|```/g,'').trim();
+}
+function f2b(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=rej;r.readAsDataURL(file);});}
+var CV_PROMPT='Eres asistente de RRHH de Avila Law Consulting. Analiza hojas de vida para el cargo actual. Responde UNICAMENTE con JSON:\n{"nombre":"...","telefono":"10 digitos o null","email":"...o null","titulo_derecho":"si|no|no_indicado","tarjeta_profesional":"si|no|no_indicado","anos_experiencia_estimados":0,"experiencia_relevante":"1-2 frases","puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases","alertas":["..."]}';
+
+window.analizarCVs=async function(){
+  var inp=gid('cv-files');if(!inp)return;
+  var files=Array.from(inp.files||[]);if(!files.length){alert('Selecciona archivos.');return;}
+  var btn=gid('cv-btn');if(btn)btn.disabled=true;
+  for(var i=0;i<files.length;i++){
+    var file=files[i];
+    var ldEl=gid('cv-ld');if(ldEl)ldEl.textContent='Analizando '+(i+1)+'/'+files.length+': '+file.name;
+    try{
+      var b64=await f2b(file);
+      var block=file.type==='application/pdf'?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}:{type:'image',source:{type:'base64',media_type:file.type,data:b64}};
+      var raw=await callAI([{role:'user',content:[block,{type:'text',text:CV_PROMPT}]}],1000);
+      var p=JSON.parse(raw);
+      var cand={id:'cv-'+Date.now()+'-'+i,stage:'cv',nombre:p.nombre||'Sin nombre',fileName:file.name,analizadoEn:nowStr(),cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null}};
+      var idx=cands.findIndex(function(c){return c.fileName===file.name;});
+      if(idx>=0)cands[idx]=cand;else cands.unshift(cand);
+      await guardarCandidato(cand);
+    }catch(e){console.error(e);}
+  }
+  if(btn)btn.disabled=false;
+  if(gid('cv-ld'))gid('cv-ld').textContent='';
+  if(inp)inp.value='';
+  render();
+};
+
+/* ══ ACCIONES CANDIDATO ══ */
+window.citarCandidato=async function(id){
+  var c=findCand(id);if(!c)return;c.stage='interview';await guardarCandidato(c);tab='pipeline';render();setTimeout(function(){openModal(id);},150);
+};
+window.enviarAPsic=async function(id){var c=findCand(id);if(!c)return;c.stage='psic';await guardarCandidato(c);closeModalDirect();render();};
+window.enviarAFinal=async function(id){var c=findCand(id);if(!c)return;c.stage='final';await guardarCandidato(c);closeModalDirect();render();};
+window.quitarDeFinal=async function(id){var c=findCand(id);if(!c)return;c.stage='psic';await guardarCandidato(c);closeModalDirect();render();};
+window.eliminarCand=async function(id){
+  if(!confirm('Eliminar candidato?'))return;
+  var c=findCand(id);if(!c)return;
+  if(c._sbid)await sbDelete('Candidatos',c._sbid);
+  cands=cands.filter(function(x){return x.id!==id;});
+  render();
+};
+window.descartarModal=function(id){
+  var razon=prompt('Razon de descalificacion:','');if(razon===null)return;if(!razon.trim()){alert('Escribe una razon.');return;}
+  var c=findCand(id);if(!c)return;c.descartadoRH=true;c.descartadoRHRazon=razon.trim();c.descartadoRHFecha=nowStr();
+  if(c.interview){c.interview.verdict='noapto';c.interview.verdictLabel='Descartada por RRHH';}
+  guardarCandidato(c).then(function(){closeModalDirect();render();
+    // Ofrecer enviar WhatsApp de agradecimiento
+    var tel=(c.cv&&c.cv.telefono||'').replace(/\D/g,'');
+    if(tel){
+      var nombre=c.nombre.split(' ')[0];
+      var msg=encodeURIComponent('Hola '+nombre+', te escribimos desde Ávila Law Consulting. Queremos agradecerte por tu tiempo y participación en nuestro proceso de selección para la vacante de Dependiente Judicial. Aunque en esta ocasión seleccionamos un perfil diferente, tu hoja de vida quedará en nuestra base de datos y te tendremos en cuenta para futuras oportunidades que se alineen con tu perfil. ¡Muchos éxitos en tu camino profesional!');
+      if(confirm('¿Enviar mensaje de agradecimiento por WhatsApp a '+c.nombre+'?')){
+        window.open('https://wa.me/57'+tel+'?text='+msg,'_blank');
+      }
+    }
+  });
+};
+window.moverABanco=async function(id){
+  var c=findCand(id);if(!c)return;
+  c.bancoTalento=true;c.descartadoRH=false;c.bancoFecha=nowStr();
+  await guardarCandidato(c);closeModalDirect();render();
+  // Ofrecer WhatsApp de agradecimiento
+  var tel=(c.cv&&c.cv.telefono||'').replace(/\D/g,'');
+  if(tel){
+    var nombre=c.nombre.split(' ')[0];
+    var msg=encodeURIComponent('Hola '+nombre+', te escribimos desde Ávila Law Consulting. Queremos agradecerte por tu tiempo y participación en nuestro proceso de selección para la vacante de Dependiente Judicial. Aunque en esta ocasión seleccionamos un perfil diferente, tu hoja de vida quedará en nuestra base de datos y te tendremos en cuenta con prioridad para futuras oportunidades. ¡Fue un placer conocerte y mucho éxito!');
+    if(confirm('¿Enviar mensaje de agradecimiento por WhatsApp a '+c.nombre+'?')){
+      window.open('https://wa.me/57'+tel+'?text='+msg,'_blank');
+    }
+  }
+};
+window.enviarWAGracias=function(id){
+  var c=findCand(id);if(!c)return;
+  var tel=(c.cv&&c.cv.telefono||'').replace(/\D/g,'');
+  if(!tel){alert('Este candidato no tiene teléfono registrado.');return;}
+  var nombre=c.nombre.split(' ')[0];
+  var msg=encodeURIComponent('Hola '+nombre+', te escribimos desde Ávila Law Consulting. Queremos agradecerte por tu tiempo y participación en nuestro proceso de selección para la vacante de Dependiente Judicial. Aunque en esta ocasión seleccionamos un perfil diferente, tu hoja de vida quedará en nuestra base de datos y te tendremos en cuenta para futuras oportunidades que se alineen con tu perfil. ¡Muchos éxitos en tu camino profesional!');
+  window.open('https://wa.me/57'+tel+'?text='+msg,'_blank');
+};
+window.reactivarCandidato=async function(id){
+  var c=findCand(id);if(!c)return;c.descartadoRH=false;c.descartadoRHRazon='';
+  if(c.interview){var t=c.interview.total||0;var el=c.interview.elimTitulo&&c.interview.elimTarjeta&&c.interview.elimDisp;if(!el){c.interview.verdict='noapto';c.interview.verdictLabel='No pasa - requisito eliminatorio';}else if(t>=75){c.interview.verdict='apto';c.interview.verdictLabel='Pasa a pruebas psicométricas';}else if(t>=55){c.interview.verdict='reservas';c.interview.verdictLabel='Pasa con reservas';}else{c.interview.verdict='noapto';c.interview.verdictLabel='No pasa el filtro RRHH';}}
+  await guardarCandidato(c);closeModalDirect();render();
+};
+
+/* ══ ENTREVISTA FORM ══ */
+window.openInterviewForm=function(id){formId=id;tab='form-interview';render();};
+window.openPsicForm=function(id){psicFiles={};formId=id;tab='form-psic';render();};
+window.goBackFromForm=function(){tab='pipeline';formId=null;render();};
+window.goTab=function(t){tab=t;formId=null;render();};
+
+function buildInterviewForm(){
+  var c=findCand(formId);if(!c)return '<div style="padding:20px">No encontrado.</div>';
+  var cv=c.cv||{},iv=c.interview||{};
+  var summ='<div class="form-cvsumm"><h4>'+esc(c.nombre)+'</h4><div style="font-size:12.5px">CV: '+(cv.puntaje||0)+'/100 · '+cvLabel(cv.veredicto||'')+'</div><div style="font-size:12.5px">'+esc(cv.experiencia||'')+'</div></div>';
+  var elim='<div class="card"><h4 style="font-size:15px;margin-bottom:10px">Requisitos eliminatorios</h4><div class="elim"><input type="checkbox" id="el-t" '+(iv.elimTitulo?'checked':'')+'><span>Es egresado de Derecho.</span></div><div class="elim"><input type="checkbox" id="el-tp" '+(iv.elimTarjeta?'checked':'')+'><span>Cuenta con Tarjeta Profesional Provisional vigente.</span></div><div class="elim"><input type="checkbox" id="el-d" '+(iv.elimDisp?'checked':'')+'><span>Tiene disponibilidad real para trabajar.</span></div></div>';
+  var meta='<div class="card"><div class="field"><label>Como se entero de esta vacante?</label><input type="text" id="iv-source" value="'+esc(iv.source||'')+'" placeholder="LinkedIn, referido, canal de WA..."></div><div class="field" style="margin-top:10px"><label style="color:var(--gold)">📝 Notas previas del entrevistador (la IA las tendra en cuenta al calificar)</label><textarea id="iv-prenotes" rows="3" placeholder="Escribe tus impresiones, dudas o contexto antes de que la IA califique. Ej: el candidato se veia nervioso, confirmo disponibilidad, nego salario, etc." style="font-size:13px;border:1.5px solid var(--gold)">'+esc(iv.prenotes||'')+'</textarea></div></div>';
+  var aiBar='<div class="ai-bar"><p>Llena las respuestas y deja que la IA las califique. Tus notas previas seran consideradas.</p><button class="btn gold" id="ai-btn" onclick="scoreWithAI(\''+c.id+'\')">Calificar con IA</button></div>';
+  var qs='';
+  CATS.forEach(function(cat){
+    qs+='<div class="cat-block"><div class="cat-head"><h4>'+cat.label+'</h4><span class="wt">'+cat.w+'%</span></div>';
+    cat.qs.forEach(function(qid){var q=Q[qid],ans=(iv.answers&&iv.answers[qid])||{};qs+='<div class="qblock"><div class="qtxt">'+esc(q.t)+'</div><div class="qmeta">Mide: '+esc(q.m)+'</div><textarea class="qanswer" id="qa-'+qid+'" rows="2" placeholder="Resumen...">'+esc(ans.respuesta||'')+'</textarea><div class="qrat-row"><label>Calificacion:</label><select id="qr-'+qid+'"><option value="">Sin calificar</option>'+[1,2,3,4,5].map(function(n){return '<option value="'+n+'"'+(ans.rating==n?' selected':'')+'>'+n+' - '+['Muy debil','Debil','Aceptable','Bueno','Excelente'][n-1]+'</option>';}).join('')+'</select><span class="ai-note-txt" id="ain-'+qid+'">'+esc(ans.aiNote||'')+'</span></div></div>';});
+    qs+='</div>';
+  });
+  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button class="btn ghost sm" onclick="goBackFromForm()">← Volver</button></div><div class="card"><h2>'+esc(c.nombre)+'</h2><p style="font-size:13px;color:var(--ink2);margin-top:4px">Entrevista RRHH - '+nowStr()+'</p></div>'+summ+elim+meta+aiBar+qs+'<div class="card"><div class="field"><label>Notas generales</label><textarea id="iv-notes" rows="2" placeholder="Impresion general...">'+esc(iv.notes||'')+'</textarea></div></div><div style="display:flex;gap:10px;margin-top:14px;flex-wrap:wrap"><button class="btn" onclick="guardarEntrevista(\''+c.id+'\')">Guardar evaluacion</button><button class="btn ghost" onclick="goBackFromForm()">Cancelar</button></div>';
+}
+
+window.scoreWithAI=async function(id){
+  var c=findCand(id);if(!c)return;var btn=gid('ai-btn');if(btn){btn.disabled=true;btn.textContent='Calificando...';}
+  var allQAs=Object.keys(Q).map(function(qid){return '['+qid+']\nPregunta: '+Q[qid].t+'\nMide: '+Q[qid].m+'\nRespuesta: '+(gid('qa-'+qid)&&gid('qa-'+qid).value||'sin respuesta');}).join('\n\n');
+  var prenotes=gid('iv-prenotes')&&gid('iv-prenotes').value||'';
+  var prenotesCtx=prenotes?'\n\nNOTAS DEL ENTREVISTADOR (considera esto al calificar):\n'+prenotes:'';
+  try{
+    var raw=await callAI([{role:'user',content:'Eres evaluador de RRHH para firma de abogados en Colombia. Candidato: '+c.nombre+'. Escala 1-5.'+prenotesCtx+'\n\n'+allQAs+'\n\nResponde UNICAMENTE con JSON:\n{"scores":{"log1":{"score":3,"nota":"max 10 palabras"}}}'}],2000);
+    var scores=JSON.parse(raw).scores||{};
+    Object.keys(scores).forEach(function(qid){var sel=gid('qr-'+qid);var nt=gid('ain-'+qid);if(sel&&scores[qid].score)sel.value=String(scores[qid].score);if(nt&&scores[qid].nota)nt.textContent='IA: '+scores[qid].nota;});
+  }catch(e){alert('Error IA: '+e.message);}
+  if(btn){btn.disabled=false;btn.textContent='Calificar con IA';}
+};
+
+window.guardarEntrevista=async function(id){
+  var c=findCand(id);if(!c)return;
+  var missing=Object.keys(Q).filter(function(qid){return!gid('qr-'+qid)||!gid('qr-'+qid).value;});
+  if(missing.length){alert('Faltan '+missing.length+' calificaciones.');return;}
+  var answers={};
+  Object.keys(Q).forEach(function(qid){answers[qid]={text:Q[qid].t,respuesta:(gid('qa-'+qid)&&gid('qa-'+qid).value)||'',rating:parseInt((gid('qr-'+qid)&&gid('qr-'+qid).value)||'0',10),aiNote:(gid('ain-'+qid)&&gid('ain-'+qid).textContent)||''};});
+  var catScores={};
+  CATS.forEach(function(cat){catScores[cat.id]=Math.round(cat.qs.reduce(function(s,q){return s+(answers[q].rating||0);},0)/cat.qs.length/5*1000)/10;});
+  var total=Math.round(CATS.reduce(function(s,cat){return s+catScores[cat.id]*(cat.w/100);},0)*10)/10;
+  var elT=!!(gid('el-t')&&gid('el-t').checked),elTP=!!(gid('el-tp')&&gid('el-tp').checked),elD=!!(gid('el-d')&&gid('el-d').checked);
+  var verdict,vLabel;
+  if(!elT||!elTP||!elD){verdict='noapto';vLabel='No pasa - requisito eliminatorio';}
+  else if(total>=75){verdict='apto';vLabel='Pasa a pruebas psicométricas';}
+  else if(total>=55){verdict='reservas';vLabel='Pasa con reservas';}
+  else{verdict='noapto';vLabel='No pasa el filtro RRHH';}
+  c.interview={done:true,date:nowStr(),source:(gid('iv-source')&&gid('iv-source').value)||'',prenotes:(gid('iv-prenotes')&&gid('iv-prenotes').value)||'',elimTitulo:elT,elimTarjeta:elTP,elimDisp:elD,answers:answers,catScores:catScores,total:total,verdict:verdict,verdictLabel:vLabel,notes:(gid('iv-notes')&&gid('iv-notes').value)||''};
+  await guardarCandidato(c);tab='pipeline';formId=null;render();
+};
+
+/* ══ PSIC FORM ══ */
+function buildPsicForm(){
+  var c=findCand(formId);if(!c)return '<div style="padding:20px">No encontrado.</div>';
+  var psic=c.psic||{},iv=c.interview||{};
+  var results='';
+  if(psic.done&&psic.tests){var rc={Avanzar:'g',Revisar:'a','No avanzar':'r'}[psic.recomendacion]||'a';results='<div class="card"><h4 style="font-size:15px;margin-bottom:12px">Resultado del analisis</h4><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="badge '+rc+'">'+esc(psic.recomendacion)+'</span><span style="font-size:13px;font-weight:600">'+esc(psic.conclusion)+'</span></div><p style="font-size:13px;color:var(--ink2)">'+esc(psic.justificacion)+'</p>'+(psic.tests||[]).map(function(t){var tc=t.adecuacion==='Alta'?'g':t.adecuacion==='Media'?'a':'r';return '<div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:8px"><div style="display:flex;gap:8px;margin-bottom:4px"><b>'+esc(t.nombre)+'</b><span class="badge '+tc+'">'+esc(t.adecuacion)+'</span></div><p style="font-size:12px;color:var(--ink2)">'+esc(t.interpretacion)+'</p>'+(t.fortalezas&&t.fortalezas.length?'<div style="font-size:12px;color:var(--green);margin-top:4px">OK: '+t.fortalezas.map(esc).join(' | ')+'</div>':'')+(t.riesgos&&t.riesgos.length?'<div style="font-size:12px;color:var(--red);margin-top:2px">Riesgos: '+t.riesgos.map(esc).join(' | ')+'</div>':'')+'</div>';}).join('')+'</div>';}
+  var uploads='<div style="margin-bottom:12px"><p style="font-size:13px;color:var(--ink2);margin-bottom:10px">Sube el reporte PDF de PsicoSmart u otras pruebas. Puedes subir varios archivos.</p>'+'<input type="file" accept=".pdf,.png,.jpg,.jpeg" multiple onchange="onPsicFiles(this)" style="font-size:13px"></div>';
+  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button class="btn ghost sm" onclick="goBackFromForm()">← Volver</button></div><div class="card"><h2>Pruebas Psicométricas</h2><p style="font-size:13px;color:var(--ink2);margin-top:4px">'+esc(c.nombre)+' - '+nowStr()+'</p><div style="margin-top:8px;font-size:13px">CV: '+(c.cv&&c.cv.puntaje||0)+'/100 | Entrevista: '+(iv.total||0)+'/100 | '+esc(iv.verdictLabel||'')+'</div></div><div class="card"><h4 style="font-size:15px;margin-bottom:12px">Subir resultados de pruebas</h4>'+uploads+'<div style="display:flex;gap:10px;margin-top:14px"><button class="btn gold" id="psic-btn" onclick="analizarPruebas(\''+c.id+'\')">Analizar con IA</button></div><div id="psic-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>'+results;
+}
+window.onPsicFiles=function(inp){psicFiles={};if(inp.files){for(var i=0;i<inp.files.length;i++){psicFiles['archivo'+(i+1)]=inp.files[i];}}};
+window.onPsicFile=function(t,inp){if(inp.files&&inp.files[0])psicFiles[t]=inp.files[0];};
+window.analizarPruebas=async function(id){
+  var c=findCand(id);if(!c)return;if(!Object.keys(psicFiles).length){alert('Sube al menos un archivo.');return;}
+  var btn=gid('psic-btn'),ld=gid('psic-ld');if(btn)btn.disabled=true;if(ld)ld.textContent='Analizando con IA (esto puede tomar 30 segundos)...';
+  var iv=c.interview||{};
+  var blocks=[];
+  for(var t in psicFiles){try{var f=psicFiles[t],b=await f2b(f);blocks.push(f.type==='application/pdf'?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b}}:{type:'image',source:{type:'base64',media_type:f.type,data:b}});}catch(e){}}
+  var ctx='Candidato: '+c.nombre+'\nCargo: Dependiente Judicial (medio tiempo) - Avila Law Consulting, Bogota.\nPerfil requerido: responsable, organizado, etico, integro, buena comunicacion, tolerancia al estres, orientacion al detalle, sigue instrucciones con criterio propio, apto para trabajar bajo supervision directa de abogados en firma de litigio civil y privado.';
+  if(iv.total)ctx+='\nPuntaje entrevista RRHH: '+iv.total+'/100 ('+esc(iv.verdictLabel||'')+').';
+  if(iv.notes)ctx+='\nNotas de entrevista: '+iv.notes;
+  if(iv.prenotes)ctx+='\nNotas del entrevistador: '+iv.prenotes;
+  blocks.push({type:'text',text:'Eres psicologo organizacional experto con 20 anos de experiencia en evaluacion de personal para firmas juridicas en Colombia. Analiza los reportes psicometricos adjuntos del candidato.\n\n'+ctx+'\n\nInstrucciones:\n- Lee e interpreta cada prueba con criterio clinico y organizacional experto.\n- Cruza los resultados entre pruebas si hay varias.\n- Evalua la adecuacion al cargo especifico (dependiente judicial en firma de litigio).\n- Identifica fortalezas y riesgos concretos para el cargo.\n- Se critico y objetivo. No suavices riesgos reales.\n\nResponde UNICAMENTE con JSON valido sin texto extra ni backticks:\n{"tests":[{"nombre":"nombre de la prueba","interpretacion":"interpretacion experta de los resultados","fortalezas":["fortaleza concreta 1","fortaleza concreta 2"],"riesgos":["riesgo concreto 1"],"adecuacion":"Alta|Media|Baja"}],"conclusion":"sintesis integradora de todas las pruebas en 2-3 oraciones","recomendacion":"Avanzar|Revisar|No avanzar","justificacion":"razon experta de la recomendacion considerando el cargo especifico"}'});
+  try{
+    var raw=await callAI([{role:'user',content:blocks}],3000);
+    var p=JSON.parse(raw);
+    c.psic={done:true,analizadoEn:nowStr(),tests:p.tests||[],conclusion:p.conclusion||'',recomendacion:p.recomendacion||'Revisar',justificacion:p.justificacion||''};
+    await guardarCandidato(c);psicFiles={};tab='pipeline';formId=null;render();
+  }catch(e){if(btn){btn.disabled=false;btn.textContent='Analizar con IA';}if(ld)ld.textContent='';alert('Error: '+e.message);}
+};
+
+/* ══ KANBAN ══ */
+var COLS_KB=[
+  {id:'cv_ok',label:'CV Aptos',icon:'📄',fn:function(c){return c.stage==='cv'&&c.cv&&c.cv.veredicto==='citar'&&!c.waSent;},color:'#b8924a'},
+  {id:'cv_wa',label:'Contactados',icon:'📲',fn:function(c){return c.stage==='cv'&&c.waSent&&!c.scheduled;},color:'#2a8f9e'},
+  {id:'interview',label:'Entrevista',icon:'🗣',fn:function(c){return c.stage==='interview'&&!c.descartadoRH&&!c.bancoTalento;},color:'#5a3fbf'},
+  {id:'psic',label:'Pruebas Psicométricas',icon:'🧠',fn:function(c){return c.stage==='psic'&&!c.descartadoRH&&!c.bancoTalento;},color:'#2a8f9e'},
+  {id:'final',label:'Informe Final',icon:'✅',fn:function(c){return c.stage==='final'&&!c.descartadoRH&&!c.bancoTalento;},color:'#2a7d44'},
+  {id:'banco',label:'Banco de Talento',icon:'⭐',fn:function(c){return !!c.bancoTalento;},color:'#7b5ea7'},
+  {id:'desc',label:'Descartadas',icon:'❌',fn:function(c){return !!c.descartadoRH&&!c.bancoTalento;},color:'#b5453f'}
+];
+function buildKCard(c){
+  var cv=c.cv||{},cs=composite(c),cl=scoreClass(cs);
+  var stCls=c.descartadoRH?'s-desc':c.stage==='final'?'s-final':c.stage==='psic'?'s-psic':c.stage==='interview'?'s-interview':'';
+  var pills='';
+  if(cv.puntaje!=null)pills+='<span class="kb-score-pill '+scoreClass(cv.puntaje)+'">CV '+cv.puntaje+'</span>';
+  if(c.interview&&c.interview.total!=null)pills+='<span class="kb-score-pill '+scoreClass(c.interview.total)+'">Ent. '+c.interview.total+'</span>';
+  if(c.psic&&c.psic.done){var pr=c.psic.recomendacion||'';pills+='<span class="kb-score-pill '+(pr==='Avanzar'?'g':pr==='Revisar'?'a':'r')+'">'+esc(pr)+'</span>';}
+  if(cs&&(c.interview||c.stage==='psic'||c.stage==='final'))pills+='<span class="kb-score-pill '+cl+'" style="font-weight:800">'+cs+'</span>';
+  var st='';
+  if(c.descartadoRH)st='<div style="font-size:10px;color:var(--red)">'+esc((c.descartadoRHRazon||'').slice(0,50))+'</div>';
+  else if(c.stage==='final')st='<div style="font-size:10px;color:var(--green);font-weight:600">Para el Abogado</div>';
+  else if(c.stage==='psic')st='<div style="font-size:10px;color:#2a8f9e;font-weight:600">'+(c.psic&&c.psic.done?'Psico: '+esc(c.psic.recomendacion):'Pruebas pendientes')+'</div>';
+  else if(c.interview&&c.interview.done)st='<div style="font-size:10px;color:#5a3fbf;font-weight:600">'+esc(c.interview.verdictLabel||'')+'</div>';
+  else if(c.scheduled&&c.scheduled.fecha)st='<div style="font-size:10px;color:var(--gold);font-weight:600">'+c.scheduled.fecha+'</div>';
+  return '<div class="kb-card '+stCls+'" draggable="true" data-cid="'+c.id+'" ondragstart="dragStart(event)" ondragend="dragEnd(event)" onclick="openModal(\''+c.id+'\')"><div class="kb-card-bar" style="height:3px;background:var(--cream)"><div style="height:100%;width:'+Math.min(cs,100)+'%;background:'+(cs>=75?'var(--green)':cs>=55?'var(--amber)':'var(--red)')+'"></div></div><div class="kb-card-top"><div class="kb-card-name">'+esc(c.nombre)+'</div>'+(cv.telefono?'<div style="font-size:10px;color:var(--ink2)">'+esc(cv.telefono)+'</div>':'')+(cv.email?'<div style="font-size:9.5px;color:var(--ink2);opacity:0.8">'+esc(cv.email)+'</div>':'')+st+'</div>'+(pills?'<div class="kb-card-scores">'+pills+'</div>':'')+'</div>';
+}
+function buildPipeline(){
+  var byCol={};COLS_KB.forEach(function(col){byCol[col.id]=[];});
+  cands.forEach(function(c){
+    if(c.bancoTalento){byCol['banco'].push(c);return;}
+    if(c.descartadoRH){byCol['desc'].push(c);return;}
+    if(c.stage==='final'){byCol['final'].push(c);return;}
+    if(c.stage==='psic'){byCol['psic'].push(c);return;}
+    if(c.stage==='interview'){byCol['interview'].push(c);return;}
+    if(c.stage==='cv'){if(c.waSent||c.scheduled){byCol['cv_wa'].push(c);}else if(c.cv&&c.cv.veredicto!=='no_citar'){byCol['cv_ok'].push(c);}}
+  });
+  return '<div class="kanban-wrap"><div class="kanban-board">'+COLS_KB.map(function(col){var items=byCol[col.id]||[];items.sort(function(a,b){return composite(b)-composite(a);});return '<div class="kb-col"><div class="kb-col-head" style="background:'+col.color+'"><h3>'+col.icon+' '+col.label+'</h3><span class="col-ct">'+items.length+'</span></div><div class="kb-col-body" data-col="'+col.id+'" ondragover="dragOver(event)" ondragleave="dragLeave(event)" ondrop="dropCard(event)">'+(items.map(buildKCard).join('')||'<div style="padding:12px;color:#aaa;font-size:12px;text-align:center">Sin candidatos</div>')+'</div></div>';}).join('')+'</div></div>';
+}
+
+/* ══ PREFILTRO ══ */
+function buildCvTab(){
+  var cvs=cands.slice().sort(function(a,b){return(b.cv&&b.cv.puntaje||0)-(a.cv&&a.cv.puntaje||0);});
+  var cards='';
+  cvs.forEach(function(c){
+    var cv=c.cv||{},bc=cvBadge(cv.veredicto),pct=Math.min(cv.puntaje||0,100),cited=c.stage!=='cv';
+    var vd2=bc==='green'?'apto':bc==='amber'?'reservas':'noapto';
+    cards+='<div class="cand-card"><div style="height:4px;background:var(--cream)"><div class="bar-f '+bc+'" style="width:'+pct+'%;height:100%;background:'+(bc==='green'?'var(--green)':bc==='amber'?'var(--amber)':'var(--red)')+'"></div></div><div class="cand-top"><div><span class="cand-name">'+esc(c.nombre)+'</span><div style="font-size:11.5px;color:var(--ink2);margin-top:2px">'+esc(c.fileName)+' - '+esc(c.analizadoEn)+'</div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-family:Source Serif 4,serif;font-size:22px;font-weight:700;color:'+vColor(vd2)+'">'+(cv.puntaje||0)+'</span><span class="badge '+bc+'">'+cvLabel(cv.veredicto)+'</span></div></div><div class="cand-acts">'+(cited?'<span class="badge grey">En proceso</span> <button class="lbtn" onclick="tab=\'pipeline\';render()">Ver en Pipeline</button>':(cv.veredicto!=='no_citar'?'<button class="btn sm green" onclick="citarCandidato(\''+c.id+'\')">Citar</button>':''))+' <button class="lbtn" onclick="toggleDetCvd(\''+c.id+'\')">Ver analisis</button> <button class="lbtn red" onclick="eliminarCand(\''+c.id+'\')">Eliminar</button></div><div class="cand-detail" id="cvd-'+c.id+'"><div class="dl"><b>Telefono</b><span>'+(cv.telefono||'No indicado')+'</span></div><div class="dl"><b>Experiencia</b><span>'+esc(cv.experiencia||'')+'</span></div><div class="dl"><b>Justificacion</b><span>'+esc(cv.justificacion||'')+'</span></div>'+(cv.alertas&&cv.alertas.length?'<div class="dl"><b>Verificar</b>'+cv.alertas.map(function(a){return '<span>* '+esc(a)+'</span>';}).join('')+'</div>':'')+'</div></div>';
+  });
+  return '<div class="card"><h2>Pre-filtro de hojas de vida</h2><p style="font-size:13px;color:var(--ink2);margin:8px 0 14px">Sube las hojas de vida. La IA las analiza frente al perfil del cargo.</p><div class="field"><label>Hojas de vida PDF, PNG o JPG</label><input type="file" id="cv-files" accept=".pdf,.png,.jpg,.jpeg" multiple></div><div style="display:flex;gap:10px;margin-top:10px"><button class="btn" id="cv-btn" onclick="analizarCVs()">Analizar hojas de vida</button></div><div id="cv-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div><div class="tip">La herramienta marca no indicado cuando el CV no lo menciona explicitamente. Confirma siempre los requisitos eliminatorios en la entrevista.</div></div>'+(cvs.length?cards:'<div style="text-align:center;padding:30px;color:var(--ink2)">Aun no hay hojas de vida analizadas.</div>');
+}
+window.toggleDetCvd=function(id){var el=gid('cvd-'+id);if(el)el.classList.toggle('open');};
+
+/* ══ GESTION ══ */
+function buildGestionTab(){
+  var activas=cands.filter(function(c){return!c.descartadoRH&&!c.bancoTalento&&((c.cv&&c.cv.veredicto==='citar')||c.stage==='interview'||c.stage==='psic'||c.stage==='final');});
+  var desc=cands.filter(function(c){return c.descartadoRH;});
+  var ag=activas.filter(function(c){return c.scheduled&&!(c.interview&&c.interview.done);}).length;
+  var re=activas.filter(function(c){return c.interview&&c.interview.done;}).length;
+  var ps=activas.filter(function(c){return c.stage==='psic'||c.stage==='final';}).length;
+  var fi=activas.filter(function(c){return c.stage==='final';}).length;
+  var kpis='<div class="gest-summary">'+(desc.length?'<div class="gest-kpi" style="border-top-color:var(--red)"><span class="kn" style="color:var(--red)">'+desc.length+'</span><span class="kl">Descartadas</span></div>':'')+'<div class="gest-kpi"><span class="kn">'+activas.length+'</span><span class="kl">En proceso</span></div><div class="gest-kpi" style="border-top-color:var(--amber)"><span class="kn" style="color:var(--amber)">'+ag+'</span><span class="kl">Agendadas</span></div><div class="gest-kpi" style="border-top-color:#5a3fbf"><span class="kn" style="color:#5a3fbf">'+re+'</span><span class="kl">Entrevistadas</span></div><div class="gest-kpi" style="border-top-color:#2a8f9e"><span class="kn" style="color:#2a8f9e">'+ps+'</span><span class="kl">En Pruebas</span></div><div class="gest-kpi" style="border-top-color:var(--green)"><span class="kn" style="color:var(--green)">'+fi+'</span><span class="kl">Al Abogado</span></div></div>';
+
+  // AI Recommendation box - considera todo el pipeline
+  var finales=cands.filter(function(c){return!c.descartadoRH&&!c.bancoTalento&&c.psic&&c.psic.done;}).sort(function(a,b){return composite(b)-composite(a);});
+  var pendientesEntrevista=cands.filter(function(c){return!c.descartadoRH&&c.scheduled&&!(c.interview&&c.interview.done);});
+  var pendientesPsico=cands.filter(function(c){return!c.descartadoRH&&c.interview&&c.interview.done&&!(c.psic&&c.psic.done);});
+  var hayAvanzar=finales.filter(function(c){return c.psic&&c.psic.recomendacion==='Avanzar';});
+  var hayRevisar=finales.filter(function(c){return c.psic&&c.psic.recomendacion==='Revisar';});
+  var recBox='';
+  var rec='',recColor='var(--green)',recIcon='✅',recTitle='Recomendación de Contratación';
+
+  if(hayAvanzar.length>=1){
+    var top=hayAvanzar[0],topCs=composite(top);
+    var second=hayAvanzar[1]||null;
+    // ¿Vale la pena esperar a los pendientes?
+    var mejorPendienteCV=pendientesEntrevista.length>0?Math.max.apply(null,pendientesEntrevista.map(function(c){return c.cv&&c.cv.puntaje||0;})):0;
+    var puedeSuperar=mejorPendienteCV>=85; // Si alguien pendiente tiene CV >= 85, podría superar al top actual
+
+    rec='<b>Ya tienes un candidato listo para contratar.</b> ';
+    rec+='<b>'+esc(top.nombre)+'</b> lidera el proceso con un puntaje compuesto de <b>'+topCs+'/100</b> ';
+    rec+='(CV: '+(top.cv&&top.cv.puntaje||0)+' · Entrevista: '+(top.interview&&top.interview.total||0)+' · Psico: '+esc(top.psic.recomendacion)+') ';
+    rec+='y su perfil psicométrico recomienda avanzar. ';
+    // Alerta específica si Mariana es top o segunda opción
+    function alertaMariana(c){return c.id==='s6'?'<br><span style="color:var(--amber)">⚠️ <b>Nota importante sobre '+esc(c.nombre)+':</b> cuenta con tarjeta profesional provisional, lo que limita su habilitación para asistir únicamente a audiencias ante jueces municipales. Su proceso de grado está proyectado para finales de año. Confirmar con el Dr. Ávila si esta limitación es aceptable para el cargo.</span>':'';}
+    rec+=alertaMariana(top);
+    if(second){rec+='<br><br><b>'+esc(second.nombre)+'</b> es una segunda opción sólida con <b>'+composite(second)+'/100</b>.'+alertaMariana(second)+' ';}
+    rec+='<br><br>';
+
+    if(pendientesEntrevista.length>0&&puedeSuperar){
+      recColor='var(--amber)';recIcon='⚠️';
+      rec+='<b>Sin embargo, hay '+pendientesEntrevista.length+' candidato(s) con entrevista pendiente</b> que tienen CVs competitivos (el mejor: '+mejorPendienteCV+'/100). ';
+      rec+='<b>Recomendación: continuar el proceso con los pendientes antes de tomar la decisión final</b>, ya que alguno podría superar al líder actual. ';
+      rec+='Si el tiempo apremia, ya tienes en '+esc(top.nombre)+' una opción confiable para contratar de inmediato.';
+    } else if(pendientesEntrevista.length>0){
+      rec+='Hay '+pendientesEntrevista.length+' candidato(s) con entrevista pendiente pero sus CVs (mejor: '+mejorPendienteCV+'/100) sugieren que es poco probable que superen al líder actual. ';
+      rec+='<b>Recomendación: puedes avanzar a entrevista final con el Dr. Ávila sin esperar a los pendientes</b>, o continuar el proceso en paralelo.';
+    } else if(pendientesPsico.length>0){
+      rec+='Hay '+pendientesPsico.length+' candidato(s) con entrevista realizada pendientes de psicométricas. ';
+      rec+='<b>Recomendación: esperar sus resultados psicométricos antes de la decisión final</b> para tener el panorama completo.';
+      recColor='var(--amber)';recIcon='⚠️';
+    } else {
+      rec+='<b>Recomendación: proceder con la entrevista final con el Dr. Ávila. No hay candidatos pendientes que puedan cambiar el ranking.</b>';
+    }
+
+  } else if(hayRevisar.length>=1){
+    var top=hayRevisar[0],topCs=composite(top);
+    recColor='var(--amber)';recIcon='⚠️';recTitle='Recomendación — Proceso en curso';
+    rec='<b>Aún no hay un candidato definitivo.</b> ';
+    rec+='El mejor puntaje actual es de <b>'+esc(top.nombre)+'</b> con <b>'+topCs+'/100</b>, ';
+    rec+='pero su psicométrico indica "Revisar" — hay alertas que deben considerarse antes de avanzar. ';
+    rec+='<br><br>';
+    if(pendientesEntrevista.length>0){
+      rec+='<b>Hay '+pendientesEntrevista.length+' candidato(s) con entrevista pendiente</b>. ';
+      rec+='<b>Recomendación: completar esas entrevistas antes de tomar una decisión</b>. Uno de los pendientes podría ser la mejor opción del proceso.';
+    } else if(pendientesPsico.length>0){
+      rec+='<b>Hay '+pendientesPsico.length+' candidato(s) pendientes de psicométricas</b>. ';
+      rec+='<b>Recomendación: esperar esos resultados — podrían cambiar completamente el ranking.</b>';
+    } else {
+      rec+='No quedan candidatos pendientes. <b>Recomendación: evaluar si contratar a '+esc(top.nombre)+' bajo reservas o abrir un nuevo proceso de selección.</b>';
+      recColor='var(--red)';recIcon='🔴';
+    }
+
+  } else {
+    recColor='var(--amber)';recIcon='⏳';recTitle='Proceso en curso — sin finalistas aún';
+    rec='El proceso está en curso. ';
+    if(pendientesPsico.length>0){
+      rec+='<b>'+pendientesPsico.length+' candidato(s) están en pruebas psicométricas</b> — los resultados definirán el ranking. ';
+    }
+    if(pendientesEntrevista.length>0){
+      var noms=pendientesEntrevista.map(function(c){return c.nombre.split(' ').slice(0,2).join(' ');}).join(', ');
+      rec+='<b>'+pendientesEntrevista.length+' entrevista(s) pendiente(s):</b> '+noms+'. ';
+    }
+    rec+='<b>Recomendación: completar las etapas pendientes antes de emitir una recomendación de contratación.</b>';
+  }
+
+  recBox='<div class="card" style="border-left:4px solid '+recColor+';margin-bottom:16px">';
+  recBox+='<div style="display:flex;align-items:center;gap:8px;margin-bottom:10px"><span style="font-size:22px">'+recIcon+'</span><h3 style="font-size:15px;color:'+recColor+'">'+recTitle+'</h3></div>';
+  recBox+='<p style="font-size:13px;line-height:1.7;color:var(--ink)">'+rec+'</p>';
+  recBox+='<p style="font-size:11px;color:var(--ink2);margin-top:10px;padding-top:8px;border-top:1px solid var(--line)">Fórmula: CV (20%) + Entrevista RRHH (50%) + Psicométricas (30%) · Actualizado automáticamente con los datos actuales del proceso.</p>';
+  recBox+='</div>';
+  var tierPsic=activas.filter(function(c){return (c.stage==='psic'||c.stage==='final')&&c.psic&&c.psic.done;});
+  var tierEnt=activas.filter(function(c){return c.interview&&c.interview.done&&!(c.psic&&c.psic.done);});
+  var tierCV=activas.filter(function(c){return !(c.interview&&c.interview.done);});
+
+  tierPsic.sort(function(a,b){return composite(b)-composite(a);});
+  tierEnt.sort(function(a,b){return composite(b)-composite(a);});
+  tierCV.sort(function(a,b){return composite(b)-composite(a);});
+
+  function buildRow(c,i,globalRank){
+    var cs=composite(c),csCl=cs>=75?'#2a7d44':cs>=55?'#b9842c':'#b5453f';
+    var medals=['🥇','🥈','🥉'];var medal=globalRank<3?medals[globalRank]:(globalRank+1)+'.';
+    var iv=c.interview||{},cv=c.cv||{};
+    var stIcon=c.stage==='final'?'✅':c.stage==='psic'?'🧠':iv.done?'🗣':c.scheduled?'📅':'⏳';
+    var psicScore=c.psic&&c.psic.done?(c.psic.recomendacion==='Avanzar'?100:c.psic.recomendacion==='Revisar'?60:20):null;
+    var scoreDetail='CV:'+(cv.puntaje||0)+(iv.total!=null?' · Ent:'+iv.total:'')+(psicScore!=null?' · Psico:'+esc(c.psic.recomendacion):'');
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line);cursor:pointer" onclick="openModal(\''+c.id+'\')"><span style="font-size:16px;min-width:26px">'+medal+'</span><div style="flex:1"><div style="font-size:13px;font-weight:700">'+esc(c.nombre)+'</div><div style="font-size:11px;color:var(--ink2);margin-top:2px">'+scoreDetail+'</div></div><span>'+stIcon+'</span><span style="font-family:Source Serif 4,serif;font-size:17px;font-weight:700;color:'+csCl+';min-width:32px;text-align:right">'+cs+'</span></div>';
+  }
+
+  var html='<div class="card">';
+  html+='<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px"><h3 style="font-size:15px">Ranking General</h3></div>';
+  html+='<div style="font-size:11px;color:var(--ink2);margin-bottom:12px">El puntaje final combina: CV (20%) + Entrevista RRHH (50%) + Pruebas Psicométricas (30%). Los candidatos se agrupan por etapa — solo compiten entre sí quienes han pasado las mismas fases. Haz clic en un candidato para ver la explicación de su puntaje.</div>';
+
+  var gr=0;
+  if(tierPsic.length){
+    html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#2a8f9e;padding:8px 16px;background:rgba(42,143,158,0.08);border-radius:6px;margin-bottom:6px">🧠 Con pruebas psicométricas — ranking definitivo</div>';
+    tierPsic.forEach(function(c){html+=buildRow(c,0,gr);gr++;});
+  }
+  if(tierEnt.length){
+    html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:#5a3fbf;padding:8px 16px;background:rgba(90,63,191,0.06);border-radius:6px;margin:10px 0 6px">🗣 Con entrevista — pendientes de psicométricas</div>';
+    tierEnt.forEach(function(c){html+=buildRow(c,0,99);});
+  }
+  if(tierCV.length){
+    html+='<div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--amber);padding:8px 16px;background:rgba(185,132,44,0.06);border-radius:6px;margin:10px 0 6px">📅 Pendientes de entrevista — no comparan aún</div>';
+    tierCV.forEach(function(c){html+=buildRow(c,0,99);});
+  }
+  html+='</div>';
+  return kpis+recBox+html;
+}
+
+/* ══ CALENDARIO ══ */
+function buildCalendarioTab(){
+  // Gather all candidates with scheduled interviews or completed interviews
+  var agendadas=cands.filter(function(c){return c.scheduled&&c.scheduled.fecha;}).sort(function(a,b){
+    return (a.scheduled.fecha+a.scheduled.horaInicio).localeCompare(b.scheduled.fecha+b.scheduled.horaInicio);
+  });
+
+  if(!agendadas.length) return '<div class="card" style="text-align:center;padding:40px;color:var(--ink2)">No hay entrevistas agendadas aún.</div>';
+
+  // Group by date
+  var byDate={};
+  agendadas.forEach(function(c){
+    var d=c.scheduled.fecha||'Sin fecha';
+    if(!byDate[d])byDate[d]=[];
+    byDate[d].push(c);
+  });
+
+  var html='';
+  Object.keys(byDate).sort().forEach(function(date){
+    var ds=date;
+    try{var dt=new Date(date+'T12:00:00');ds=dt.toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'});ds=ds.charAt(0).toUpperCase()+ds.slice(1);}catch(e){}
+    html+='<div class="card" style="margin-bottom:16px"><div style="font-size:13px;font-weight:700;color:var(--gold);border-bottom:1px solid var(--line);padding-bottom:8px;margin-bottom:10px">📅 '+ds+'</div>';
+    byDate[date].forEach(function(c){
+      var iv=c.interview||{},sc=c.scheduled||{};
+      var done=iv.done;
+      var statusColor=done?'var(--green)':'var(--amber)';
+      var statusLabel=done?'✅ Realizada':'⏳ Pendiente';
+      if(c.descartadoRH){statusColor='var(--red)';statusLabel='❌ Descartada'+(c.descartadoRHRazon?': '+c.descartadoRHRazon:'');}
+      else if(c.bancoTalento){statusColor='#7b5ea7';statusLabel='⭐ Banco de Talento';}
+      var score=done?'<span class="badge '+scoreClass(iv.total||0)+'">'+iv.total+'/100</span>':'';
+      html+='<div style="display:flex;align-items:center;gap:12px;padding:10px;border:1px solid var(--line);border-radius:8px;margin-bottom:8px;cursor:pointer;background:var(--white);opacity:'+(c.descartadoRH?'0.65':'1')+'" onclick="openModal(\''+c.id+'\')">';
+      html+='<div style="min-width:60px;text-align:center"><div style="font-size:14px;font-weight:700;color:var(--ink)">'+esc(sc.horaInicio||'--:--')+'</div><div style="font-size:10px;color:var(--ink2)">'+esc(sc.horaFin||'')+'</div></div>';
+      html+='<div style="flex:1"><div style="font-size:13px;font-weight:700">'+esc(c.nombre)+'</div>';
+      html+='<div style="font-size:11px;color:var(--ink2);margin-top:2px">'+esc(sc.email||'')+'</div></div>';
+      html+='<div style="text-align:right;display:flex;flex-direction:column;align-items:flex-end;gap:4px;max-width:220px"><span style="font-size:11px;font-weight:600;color:'+statusColor+'">'+statusLabel+'</span>'+score+'</div>';
+      html+='</div>';
+    });
+    html+='</div>';
+  });
+
+  // Summary stats
+  var total=agendadas.length;
+  var realizadas=agendadas.filter(function(c){return c.interview&&c.interview.done;}).length;
+  var descartadas=agendadas.filter(function(c){return c.descartadoRH;}).length;
+  var pendientes=agendadas.filter(function(c){return (!c.interview||!c.interview.done)&&!c.descartadoRH;}).length;
+  var summary='<div class="gest-summary" style="margin-bottom:16px"><div class="gest-kpi"><span class="kn">'+total+'</span><span class="kl">Citadas</span></div><div class="gest-kpi" style="border-top-color:var(--green)"><span class="kn" style="color:var(--green)">'+realizadas+'</span><span class="kl">Realizadas</span></div><div class="gest-kpi" style="border-top-color:var(--amber)"><span class="kn" style="color:var(--amber)">'+pendientes+'</span><span class="kl">Pendientes</span></div><div class="gest-kpi" style="border-top-color:var(--red)"><span class="kn" style="color:var(--red)">'+descartadas+'</span><span class="kl">Descartadas</span></div></div>';
+
+  return summary+html;
+}
+
+
+window.openModal=function(id){
+  var c=findCand(id);if(!c)return;modalId=id;
+  var cv=c.cv||{},iv=c.interview||{},psic=c.psic||{};
+  var siL={si:'Si',no:'No',no_indicado:'No indicado'};
+  gid('modal-name').textContent=c.nombre;
+
+  // Compute composite and explanation
+  var cvP=cv.puntaje||0;
+  var entP=iv.total!=null?iv.total:null;
+  var psicP=psic.done?(psic.recomendacion==='Avanzar'?100:psic.recomendacion==='Revisar'?60:20):null;
+  var cs=composite(c);
+  var csCl=cs>=75?'var(--green)':cs>=55?'var(--amber)':'var(--red)';
+  var formula='';
+  if(psicP!=null&&entP!=null){
+    formula='('+cvP+' × 20%) + ('+entP+' × 50%) + ('+psicP+' × 30%) = <b>'+cs+'</b>';
+  } else if(entP!=null){
+    formula='('+cvP+' × 35%) + ('+entP+' × 65%) = <b>'+cs+'</b> <span style="color:var(--amber)">(psicométricas pendientes)</span>';
+  } else {
+    formula='Solo CV: <b>'+cvP+'</b> <span style="color:var(--amber)">(entrevista pendiente)</span>';
+  }
+
+  // Find rank among psic-tier candidates
+  var tierPsic=cands.filter(function(x){return!x.descartadoRH&&(x.stage==='psic'||x.stage==='final')&&x.psic&&x.psic.done;}).sort(function(a,b){return composite(b)-composite(a);});
+  var rankPos=tierPsic.findIndex(function(x){return x.id===c.id;});
+  var rankStr='';
+  if(rankPos>=0){var medals=['🥇','🥈','🥉'];rankStr='<span style="font-size:13px"> — '+(rankPos<3?medals[rankPos]:'Puesto '+(rankPos+1))+' en ranking definitivo</span>';}
+
+  var body='<div class="modal-section"><div class="modal-section-title">Puntaje Final y Posición en Ranking</div><div class="history-item"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><span style="font-family:Source Serif 4,serif;font-size:32px;font-weight:700;color:'+csCl+'">'+cs+'</span>'+rankStr+'</div><div style="font-size:12px;color:var(--ink2);padding:8px;background:var(--cream);border-radius:6px;margin-bottom:8px"><b>Cómo se calculó:</b><br>'+formula+'</div><div style="display:flex;gap:8px;flex-wrap:wrap">'+(cv.puntaje!=null?'<span class="badge '+scoreClass(cv.puntaje)+'">CV: '+cv.puntaje+'</span>':'')+(iv.total!=null?'<span class="badge '+scoreClass(iv.total)+'">Ent.: '+iv.total+'</span>':'')+(psic.done?'<span class="badge '+(psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red')+'">Psico: '+esc(psic.recomendacion)+'</span>':'')+'</div></div></div>';
+  body+='<div class="modal-section"><div class="modal-section-title">Resumen del Candidato</div><div class="history-item">'+(cv.experiencia?'<p style="font-size:12.5px;color:var(--ink2)">'+esc(cv.experiencia)+'</p>':'')+'<p style="font-size:12px;margin-top:6px">Titulo: '+(siL[cv.titulo]||'?')+' | TP: '+(siL[cv.tarjeta]||'?')+'</p>'+(cv.telefono?'<p style="font-size:12px;margin-top:4px">'+esc(cv.telefono)+(cv.email?' | '+esc(cv.email):'')+'</p>':'')+'</div></div>';
+  var cvFileHtml=c.cvArchivo?('<div style="margin-top:10px;display:flex;align-items:center;gap:8px"><span>📎</span><span style="font-size:12px;color:var(--ink2)">'+esc(c.cvArchivo.nombre)+'</span><button class="btn sm ghost" style="font-size:11px;padding:3px 8px" onclick="descargarCV(\''+c.id+'\')">Descargar</button></div>'):'<div style="margin-top:10px;font-size:12px;color:var(--ink2)">Sin archivo de CV subido.</div>';
+  body+='<div class="modal-section"><div class="modal-section-title">Hoja de Vida</div><div class="history-item">'+(cv.justificacion?'<p style="font-size:12.5px;color:var(--ink2)">'+esc(cv.justificacion)+'</p>':'')+(cv.alertas&&cv.alertas.length?'<div style="margin-top:6px">'+cv.alertas.map(function(a){return '<div style="font-size:12px;color:var(--amber)">[!] '+esc(a)+'</div>';}).join('')+'</div>':'')+'<div style="margin-top:8px"><span class="badge '+cvBadge(cv.veredicto||'')+'">'+cvLabel(cv.veredicto||'')+'</span></div>'+cvFileHtml+'</div></div>';
+  if(iv.done){body+='<div class="modal-section"><div class="modal-section-title">Entrevista RRHH</div><div class="history-item"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><span style="font-family:Source Serif 4,serif;font-size:28px;font-weight:700;color:'+vColor(iv.verdict||'')+'">'+(iv.total||0)+'</span><span class="badge '+vClass(iv.verdict||'')+'">'+esc(iv.verdictLabel||'')+'</span></div>'+CATS.map(function(cat){var s=(iv.catScores&&iv.catScores[cat.id])||0;var cl=s>=75?'var(--green)':s>=55?'var(--amber)':'var(--red)';return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:12px"><span>'+cat.label+'</span><span style="font-weight:700;color:'+cl+'">'+s+'</span></div>';}).join('')+(iv.notes?'<div style="margin-top:8px;padding:8px;background:var(--cream);border-radius:6px;font-size:12px">'+esc(iv.notes)+'</div>':'')+'<div style="margin-top:12px"><details><summary style="cursor:pointer;font-weight:700;color:var(--gold);font-size:12px;margin-bottom:8px">Ver respuestas con razonamiento</summary>'+CATS.map(function(cat){return '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gold);margin-bottom:4px">'+cat.label+'</div>'+cat.qs.map(function(qid){var a=(iv.answers&&iv.answers[qid])||{};var rc=a.rating>=4?'var(--green)':a.rating>=3?'var(--amber)':'var(--red)';return '<div style="padding:7px;border-left:3px solid '+rc+';background:#f9f6f0;border-radius:0 6px 6px 0;margin-bottom:5px"><div style="font-size:11px;font-weight:600">'+esc(a.text||Q[qid].t)+'</div>'+(a.respuesta?'<div style="font-size:11px;color:var(--ink2);margin:2px 0">'+esc(a.respuesta)+'</div>':'')+(a.aiNote?'<div style="font-size:11px;color:#2a8f9e;font-style:italic">'+esc(a.aiNote)+'</div>':'')+'<div style="font-size:11px;font-weight:700;color:'+rc+'">'+(a.rating||0)+'/5</div></div>';}).join('')+'</div>';}).join('')+'</details></div></div></div>';}
+  else{body+='<div class="modal-section"><div class="modal-section-title">Entrevista RRHH</div><div class="history-item" style="color:var(--ink2);font-size:13px">'+(c.scheduled&&c.scheduled.fecha?'Agendada: '+c.scheduled.fecha:'Entrevista pendiente')+'</div></div>';}
+  body+='<div class="modal-section"><div class="modal-section-title">Pruebas Psicométricas</div>';
+  if(psic.done){var rc=psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red';body+='<div class="history-item"><div style="display:flex;gap:10px;align-items:center;margin-bottom:10px"><span class="badge '+rc+'" style="font-size:13px;padding:4px 12px">'+esc(psic.recomendacion)+'</span></div><div style="background:var(--cream);padding:10px;border-radius:7px;margin-bottom:10px"><p style="font-size:13px;font-weight:600;margin-bottom:4px">Conclusión del psicólogo</p><p style="font-size:12px;color:var(--ink2);margin-bottom:6px">'+esc(psic.conclusion)+'</p><p style="font-size:12px;color:var(--ink2);font-style:italic"><b>Justificación:</b> '+esc(psic.justificacion)+'</p></div>'+(psic.tests||[]).map(function(t){var tc=t.adecuacion==='Alta'?'green':t.adecuacion==='Media'?'amber':'red';return '<div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:8px"><div style="display:flex;gap:8px;align-items:center;margin-bottom:8px"><b style="font-size:13px">'+esc(t.nombre)+'</b><span class="badge '+tc+'">Adecuación: '+esc(t.adecuacion)+'</span></div><p style="font-size:12px;color:var(--ink2);margin-bottom:8px"><b>Interpretación:</b> '+esc(t.interpretacion)+'</p>'+(t.fortalezas&&t.fortalezas.length?'<div style="margin-bottom:6px"><p style="font-size:11.5px;font-weight:700;color:var(--green);margin-bottom:3px">✅ Fortalezas para el cargo:</p>'+t.fortalezas.map(function(f){return '<div style="font-size:11.5px;color:var(--ink2);padding:2px 0 2px 10px;border-left:3px solid var(--green);margin-bottom:3px">'+esc(f)+'</div>';}).join('')+'</div>':'')+(t.riesgos&&t.riesgos.length?'<div><p style="font-size:11.5px;font-weight:700;color:var(--red);margin-bottom:3px">⚠️ Riesgos / Alertas:</p>'+t.riesgos.map(function(r){return '<div style="font-size:11.5px;color:var(--ink2);padding:2px 0 2px 10px;border-left:3px solid var(--red);margin-bottom:3px">'+esc(r)+'</div>';}).join('')+'</div>':'')+'</div>';}).join('')+'</div>';}
+  else{body+='<div class="history-item" style="color:var(--ink2);font-size:13px">Pruebas psicométricas pendientes</div>';}
+  body+='</div>';
+  if(c.stage==='final'){
+    body+='<div class="modal-section"><div class="modal-section-title">Informe Final</div>';
+    if(c.informeUrl){
+      body+='<div class="history-item"><div style="display:flex;align-items:center;gap:10px"><span style="font-size:20px">📄</span><div><div style="font-size:13px;font-weight:700">'+esc(c.informeNombre||'Informe.html')+'</div><div style="font-size:11px;color:var(--ink2)">Subido: '+esc(c.informeFecha||'')+'</div></div></div></div>';
+    } else {
+      body+='<div class="history-item" style="color:var(--ink2);font-size:13px">⏳ Informe pendiente de subir. Genera el informe en Claude y súbelo aquí.</div>';
+    }
+    body+='</div>';
+  }
+  gid('modal-body').innerHTML=body;
+  var acts='';
+  if(c.bancoTalento){
+    acts='<button class="btn sm" style="background:#7b5ea7;color:#fff" onclick="enviarWAGracias(\''+c.id+'\')">💬 WA Gracias</button>';
+    acts+='<button class="btn sm ghost" onclick="reactivarCandidato(\''+c.id+'\')">Reactivar</button>';
+  } else if(c.descartadoRH){
+    acts='<button class="btn sm" style="background:#7b5ea7;color:#fff" onclick="moverABanco(\''+c.id+'\')">⭐ Banco de Talento</button>';
+    acts+='<button class="btn sm" onclick="enviarWAGracias(\''+c.id+'\')">💬 WA Gracias</button>';
+    acts+='<button class="btn sm ghost" onclick="reactivarCandidato(\''+c.id+'\')">Reactivar</button>';
+  } else {
+    if(c.stage==='cv')acts+='<button class="btn sm green" onclick="citarCandidato(\''+c.id+'\')">Citar</button>';
+    if(c.cvArchivo){acts+='<button class="btn sm ghost" onclick="descargarCV(\''+c.id+'\')">📎 CV</button>';}else{acts+='<button class="btn sm ghost" onclick="subirCV(\''+c.id+'\')">📎 Subir CV</button>';}
+    if(c.stage==='interview'){acts+='<button class="btn sm" onclick="closeModalDirect();openInterviewForm(\''+c.id+'\')">'+( iv.done?'Ver entrevista':'Realizar entrevista')+'</button>';if(iv.done&&(iv.verdict==='apto'||iv.verdict==='reservas'))acts+='<button class="btn sm green" onclick="enviarAPsic(\''+c.id+'\')">Pruebas Psicométricas</button>';}
+    if(c.stage==='psic'){acts+='<button class="btn sm" onclick="closeModalDirect();openPsicForm(\''+c.id+'\')">'+( psic.done?'Ver pruebas':'Cargar pruebas')+'</button>';if(psic.done&&psic.recomendacion==='Avanzar')acts+='<button class="btn sm green" onclick="enviarAFinal(\''+c.id+'\')">Informe Final</button>';}
+    if(c.stage==='final'){
+      acts+='<button class="btn sm" style="background:#1c1f24;color:#fff" onclick="enviarCorreoAvila(\''+c.id+'\')">✉️ Notificar al Dr. Ávila</button>';
+      acts+='<button class="btn sm" style="background:#25D366;color:#fff" onclick="abrirWA(\''+c.id+'\')">💬 WhatsApp</button>';
+      if(c.informeUrl){
+        acts+='<button class="btn sm green" onclick="descargarInforme(\''+c.id+'\')">📄 Descargar Informe</button>';
+        acts+='<button class="btn sm ghost" onclick="subirInforme(\''+c.id+'\')">↑ Reemplazar</button>';
+      } else {
+        acts+='<button class="btn sm green" onclick="subirInforme(\''+c.id+'\')">📤 Subir Informe</button>';
+      }
+    }
+    if(c.stage!=='cv')acts+='<button class="btn sm" style="background:#7b5ea7;color:#fff" onclick="moverABanco(\''+c.id+'\')">⭐ Banco de Talento</button>';
+    if(c.stage!=='cv')acts+='<button class="btn sm" style="background:var(--red)" onclick="descartarModal(\''+c.id+'\')">Descalificar</button>';
+  }
+  gid('modal-actions').innerHTML=acts;
+  gid('modal-overlay').classList.add('open');
+};
+window.closeModal=function(e){if(e.target===gid('modal-overlay'))closeModalDirect();};
+window.closeModalDirect=function(){gid('modal-overlay').classList.remove('open');modalId=null;};
+
+/* ══ INFORME FINAL ══ */
+window.subirCV=function(id){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='.pdf,.doc,.docx';
+  inp.onchange=async function(){
+    var file=inp.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=async function(e){
+      var c=findCand(id);if(!c)return;
+      var b64=e.target.result;
+      c.cvArchivo={url:b64,nombre:file.name,fecha:nowStr(),tipo:file.type};
+      await guardarCandidato(c);
+      closeModalDirect();render();
+      setTimeout(function(){openModal(id);},150);
+    };
+    reader.readAsDataURL(file);
+  };
+  inp.click();
+};
+window.descargarCV=function(id){
+  var c=findCand(id);if(!c||!c.cvArchivo)return;
+  var a=document.createElement('a');
+  a.href=c.cvArchivo.url;
+  a.download=c.cvArchivo.nombre||('CV_'+c.nombre.replace(/\s+/g,'_')+'.pdf');
+  a.click();
+};
+window.enviarCorreoAvila=function(id){
+  var c=findCand(id);if(!c)return;
+  var cargo=(currentProceso&&currentProceso.cargo)||'Dependiente Judicial';
+  var cs=composite(c);
+  var asunto='Candidato listo para entrevista final — '+c.nombre+' ('+cargo+')';
+  var cuerpo='Estimado Dr. Ávila,\n\n';
+  cuerpo+=c.nombre+' ha superado todos los filtros del proceso de selección para el cargo de '+cargo+' y está lista(o) para ser entrevistada(o) por usted.\n\n';
+  cuerpo+='Resumen del proceso:\n';
+  cuerpo+='- Puntaje CV: '+(c.cv&&c.cv.puntaje||0)+'/100\n';
+  cuerpo+='- Puntaje Entrevista RRHH: '+(c.interview&&c.interview.total||0)+'/100\n';
+  cuerpo+='- Pruebas Psicométricas: '+(c.psic&&c.psic.recomendacion||'')+'\n';
+  cuerpo+='- Puntaje compuesto final: '+cs+'/100\n\n';
+  cuerpo+='Adjunto encontrará la hoja de vida y el informe completo del proceso de selección.\n\n';
+  cuerpo+='Quedo atenta para coordinar la entrevista final.\n\n';
+  cuerpo+='Saludos,\nMaría Mónica\nÁvila Law Consulting · RRHH';
+  var mailto='mailto:miguel.avila@avilalawconsulting.com?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo);
+  window.open(mailto);
+  setTimeout(function(){
+    alert('Recuerda adjuntar el CV y el informe manualmente en el correo que se acaba de abrir.');
+  },500);
+};
+window.abrirWA=function(id){
+  var c=findCand(id);if(!c)return;
+  var tel=(c.cv&&c.cv.telefono||'').replace(/\D/g,'');
+  if(!tel){alert('Este candidato no tiene teléfono registrado.');return;}
+  window.open('https://wa.me/57'+tel,'_blank');
+};
+window.subirInforme=function(id){
+  var inp=document.createElement('input');
+  inp.type='file';inp.accept='.html,.pdf';
+  inp.onchange=async function(){
+    var file=inp.files[0];if(!file)return;
+    var reader=new FileReader();
+    reader.onload=async function(e){
+      var c=findCand(id);if(!c)return;
+      c.informeUrl='data:'+file.type+';base64,'+btoa(unescape(encodeURIComponent(e.target.result)));
+      c.informeNombre=file.name;
+      c.informeFecha=nowStr();
+      await guardarCandidato(c);
+      closeModalDirect();render();
+      setTimeout(function(){openModal(id);},150);
+      alert('Informe subido correctamente. El Dr. Ávila puede descargarlo desde su perfil.');
+    };
+    reader.readAsText(file);
+  };
+  inp.click();
+};
+window.descargarInforme=function(id){
+  var c=findCand(id);if(!c||!c.informeUrl)return;
+  var a=document.createElement('a');
+  a.href=c.informeUrl;
+  a.download=c.informeNombre||('Informe_'+c.nombre.replace(/\s+/g,'_')+'.html');
+  a.click();
+};
+
+/* ══ DRAG & DROP ══ */
+var dragging=false,dragCardId=null;
+window.dragStart=function(ev){
+  dragging=true;dragCardId=ev.target.closest('.kb-card').getAttribute('data-cid');
+  ev.target.closest('.kb-card').classList.add('dragging');
+  ev.dataTransfer.effectAllowed='move';
+  ev.dataTransfer.setData('text/plain',dragCardId);
+};
+window.dragEnd=function(ev){
+  setTimeout(function(){dragging=false;},50);
+  var el=ev.target.closest('.kb-card');if(el)el.classList.remove('dragging');
+  document.querySelectorAll('.kb-col-body').forEach(function(z){z.classList.remove('drag-over');});
+};
+window.dragOver=function(ev){ev.preventDefault();ev.currentTarget.classList.add('drag-over');};
+window.dragLeave=function(ev){ev.currentTarget.classList.remove('drag-over');};
+window.dropCard=function(ev){
+  ev.preventDefault();
+  var col=ev.currentTarget.getAttribute('data-col');
+  ev.currentTarget.classList.remove('drag-over');
+  var id=dragCardId||ev.dataTransfer.getData('text/plain');
+  var c=findCand(id);if(!c)return;
+
+  // Map column id to stage/flags
+  var moved=false;
+  if(col==='cv_ok'){c.stage='cv';c.waSent=false;c.scheduled=null;c.descartadoRH=false;c.bancoTalento=false;moved=true;}
+  else if(col==='cv_wa'){c.stage='cv';c.waSent=true;c.descartadoRH=false;c.bancoTalento=false;moved=true;}
+  else if(col==='interview'){c.stage='interview';c.descartadoRH=false;c.bancoTalento=false;moved=true;}
+  else if(col==='psic'){c.stage='psic';c.descartadoRH=false;c.bancoTalento=false;moved=true;}
+  else if(col==='final'){c.stage='final';c.descartadoRH=false;c.bancoTalento=false;moved=true;}
+  else if(col==='banco'){c.bancoTalento=true;c.descartadoRH=false;moved=true;}
+  else if(col==='desc'){c.descartadoRH=true;c.bancoTalento=false;if(!c.descartadoRHRazon){c.descartadoRHRazon='Movido manualmente desde el pipeline';c.descartadoRHFecha=nowStr();}moved=true;}
+
+  if(moved){guardarCandidato(c).then(function(){render();});}
+};
+
+/* ══ RENDER ══ */
+function render(){
+  var tabs=gid('crm-tabs'),mb=gid('crm-main');if(!tabs||!mb)return;
+  var nCV=cands.filter(function(c){return c.stage==='cv';}).length;
+  tabs.innerHTML='';
+  [['prefiltro','📄 Pre-filtro',nCV],['pipeline','📋 Pipeline',cands.length],['ranking','🏆 Ranking',null],['calendario','📅 Calendario',null]].forEach(function(t){
+    var btn=document.createElement('button');btn.className='tab-btn'+(tab===t[0]?' on':'');
+    (function(tid){btn.onclick=function(){goTab(tid);};})(t[0]);
+    btn.innerHTML=t[1]+(t[2]!=null?' <span class="ct">'+t[2]+'</span>':'');tabs.appendChild(btn);
+  });
+  if(tab==='form-interview'){mb.innerHTML='<div class="crm-body">'+buildInterviewForm()+'</div>';return;}
+  if(tab==='form-psic'){mb.innerHTML='<div class="crm-body">'+buildPsicForm()+'</div>';return;}
+  if(tab==='prefiltro')mb.innerHTML='<div class="crm-body">'+buildCvTab()+'</div>';
+  else if(tab==='pipeline')mb.innerHTML=buildPipeline();
+  else if(tab==='ranking')mb.innerHTML='<div class="crm-body">'+buildGestionTab()+'</div>';
+  else if(tab==='calendario')mb.innerHTML='<div class="crm-body">'+buildCalendarioTab()+'</div>';
+  else mb.innerHTML='<div class="crm-body">'+buildGestionTab()+'</div>';
+}
+
+/* ══ INIT ══ */
+async function init(){
+  // Verificar si hay sesion activa en localStorage
+  var saved=localStorage.getItem('av_session');
+  if(saved){try{var s=JSON.parse(saved);if(USERS[s.email]){currentUser=s;gid('user-badge').textContent=s.name;gid('loading').style.display='none';gid('app').classList.add('visible');await mostrarProcesos();return;}}catch(e){}}
+  gid('loading').style.display='none';
+  gid('login-wrap').style.display='flex';
+}
+
+// Guardar sesion al login
+var _origLogin=doLogin;
+window.doLogin=function(){
+  var email=(gid('login-email').value||'').trim().toLowerCase();
+  var pass=gid('login-pass').value||'';
+  var u=USERS[email];
+  if(u&&u.pass===pass){localStorage.setItem('av_session',JSON.stringify({email:email,name:u.name}));}
+  _origLogin();
+};
+window.doLogout=function(){localStorage.removeItem('av_session');doLogout();};
+
+init().catch(function(e){gid('loading').style.display='none';gid('login-wrap').style.display='flex';console.error(e);});
+
+})();
+</script>
+</body>
+</html>
