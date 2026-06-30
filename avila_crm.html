@@ -1032,11 +1032,8 @@ window.enviarCorreoAvila=function(id){
   cuerpo+='Adjunto encontrará la hoja de vida y el informe completo del proceso de selección.\n\n';
   cuerpo+='Quedo atenta para coordinar la entrevista final.\n\n';
   cuerpo+='Saludos,\nMaría Mónica\nÁvila Law Consulting · RRHH';
-  var mailto='mailto:miguel.avila@avilalawconsulting.com?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo);
-  window.open(mailto);
-  setTimeout(function(){
-    alert('Recuerda adjuntar el CV y el informe manualmente en el correo que se acaba de abrir.');
-  },500);
+  var gmailUrl='https://mail.google.com/mail/?view=cm&fs=1&to='+encodeURIComponent('miguel.avila@avilalawconsulting.com')+'&su='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo);
+  window.open(gmailUrl,'_blank');
 };
 window.abrirWA=function(id){
   var c=findCand(id);if(!c)return;
