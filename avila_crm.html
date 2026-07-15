@@ -489,7 +489,8 @@ function driveSetStatus(){
 }
 function driveEnsureClient(){
   if(!CFG.gClientId||typeof google==='undefined'||!google.accounts)return null;
-  if(!drive.tokenClient){
+  if(!drive.tokenClient||drive.tokenClientForId!==CFG.gClientId){
+    drive.tokenClientForId=CFG.gClientId;
     drive.tokenClient=google.accounts.oauth2.initTokenClient({
       client_id:CFG.gClientId,
       scope:'https://www.googleapis.com/auth/drive.readonly',
