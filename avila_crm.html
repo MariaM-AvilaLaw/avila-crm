@@ -278,6 +278,7 @@ h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
       <span id="proceso-titulo" style="font-size:13px;font-weight:600;color:var(--ink)"></span>
       <button class="btn ghost sm" style="margin-left:auto" onclick="abrirBancoTalentoParaProceso()">💼 Avisar Banco de Talento</button>
     </div>
+    <div id="proceso-desc-box" style="padding:10px 16px;background:var(--white);border-bottom:1px solid var(--line)"></div>
     <div class="crm-tabs" id="crm-tabs"></div>
     <div id="crm-main"></div>
   </div>
@@ -595,7 +596,7 @@ window.analizarDesdeDrive=async function(fileId,fileName){
   try{
     var b64=await driveFetchFileBase64(fileId);
     var block={type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}};
-    var raw=await callAI([{role:'user',content:[block,{type:'text',text:CV_PROMPT}]}],1000);
+    var raw=await callAI([{role:'user',content:[block,{type:'text',text:buildCvPrompt()}]}],1000);
     var p=JSON.parse(raw);
     var cand={id:'cv-'+Date.now(),stage:'cv',nombre:p.nombre||fileName,fileName:fileName,analizadoEn:nowStr(),driveLink:'https://drive.google.com/file/d/'+fileId+'/view',driveFileId:fileId,cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null,potencialBanco:!!p.potencial_banco_talento,potencialBancoRazon:p.potencial_banco_talento_razon||''}};
     cands.unshift(cand);
@@ -777,11 +778,57 @@ async function abrirProceso(id){
     cands=getSeedCands();
     await saveCands();
   }
-  tab='pipeline';formId=null;
+  tab='pipeline';formId=null;procesoDescEditing=false;
   render();
+  renderProcesoDesc();
   if(drive.token)driveSyncAll();else driveTryAutoConnect();
 }
 window.abrirProceso=abrirProceso;
+var procesoDescEditing=false;
+function renderProcesoDesc(){
+  var box=gid('proceso-desc-box');if(!box||!currentProceso)return;
+  var desc=currentProceso.descripcion||'';
+  if(procesoDescEditing){
+    box.innerHTML='<label style="font-size:12px;font-weight:600;display:block;margin-bottom:5px">Que estamos buscando (la IA usa esto para calificar hojas de vida)</label>'
+      +'<textarea id="proceso-desc-input" rows="3" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:7px;font-family:Inter,sans-serif;font-size:13px;background:var(--cream)" placeholder="Ej: buscamos un abogado litigante con al menos 3 anos de experiencia en derecho civil, con tarjeta profesional vigente, disponibilidad de tiempo completo y buen manejo de clientes corporativos.">'+esc(desc)+'</textarea>'
+      +'<div style="margin-top:8px;display:flex;gap:8px"><button class="btn sm gold" onclick="guardarPerfilBuscado()">Guardar</button><button class="btn sm ghost" onclick="cancelarEdicionPerfil()">Cancelar</button></div>';
+  }else if(desc){
+    box.innerHTML='<div style="font-size:12px;font-weight:600;color:var(--ink2);margin-bottom:3px">Perfil buscado</div><p style="font-size:13px">'+esc(desc)+'</p><div style="margin-top:8px;display:flex;gap:10px;flex-wrap:wrap"><button class="lbtn" onclick="editarPerfilBuscado()">Editar</button><button class="lbtn" onclick="revisarTodosConIA()">🔄 Revisar calificaciones de todos con IA</button></div>';
+  }else{
+    box.innerHTML='<button class="lbtn" onclick="editarPerfilBuscado()">+ Describir que estamos buscando (para que la IA califique mejor)</button>';
+  }
+}
+window.editarPerfilBuscado=function(){procesoDescEditing=true;renderProcesoDesc();};
+window.cancelarEdicionPerfil=function(){procesoDescEditing=false;renderProcesoDesc();};
+window.guardarPerfilBuscado=async function(){
+  var val=(gid('proceso-desc-input')&&gid('proceso-desc-input').value.trim())||'';
+  currentProceso.descripcion=val;
+  await guardarProceso(currentProceso);
+  procesoDescEditing=false;
+  renderProcesoDesc();
+};
+window.revisarTodosConIA=async function(){
+  if(!currentProceso||!currentProceso.descripcion){alert('Primero escribe la descripcion del perfil buscado.');return;}
+  var activos=cands.filter(function(c){return!c.descartadoRH&&c.cv;});
+  if(!activos.length){alert('No hay candidatos activos para revisar.');return;}
+  if(!confirm('Se va a revisar el puntaje de '+activos.length+' candidatos con IA segun el perfil actual. Puede tardar unos minutos. Continuar?'))return;
+  var box=gid('proceso-desc-box');
+  for(var i=0;i<activos.length;i++){
+    var c=activos[i];
+    if(box)box.insertAdjacentHTML('beforeend','<div id="revisar-progreso" style="font-size:12px;color:var(--ink2);margin-top:6px">Revisando '+(i+1)+'/'+activos.length+': '+esc(c.nombre)+'</div>');
+    var prevProgreso=gid('revisar-progreso');
+    try{
+      var prompt='Eres asistente de RRHH de Avila Law Consulting. Perfil buscado para este cargo: "'+currentProceso.descripcion+'". Candidato: '+c.nombre+'. Analisis previo del CV: puntaje '+(c.cv.puntaje||0)+', veredicto '+(c.cv.veredicto||'')+', experiencia: '+(c.cv.experiencia||'')+', justificacion: '+(c.cv.justificacion||'')+'. Considerando especificamente el perfil buscado, revisa el puntaje y el veredicto de este candidato. Responde UNICAMENTE con JSON:\n{"puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases actualizadas explicando el puntaje frente al perfil buscado"}';
+      var raw=await callAI([{role:'user',content:prompt}],400);
+      var p=JSON.parse(raw);
+      c.cv=Object.assign({},c.cv,{puntaje:p.puntaje,veredicto:p.veredicto||c.cv.veredicto,justificacion:p.justificacion||c.cv.justificacion});
+      await guardarCandidato(c);
+    }catch(e){console.warn('Error revisando '+c.nombre,e);}
+    if(prevProgreso)prevProgreso.remove();
+  }
+  render();renderProcesoDesc();
+  alert('Revision completa.');
+};
 
 /* ══ SEED DATA ══ */
 function getSeedCands(){
@@ -833,7 +880,10 @@ async function callAI(msgs,max){
   return(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').replace(/```json|```/g,'').trim();
 }
 function f2b(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=rej;r.readAsDataURL(file);});}
-var CV_PROMPT='Eres asistente de RRHH de Avila Law Consulting. Analiza hojas de vida para el cargo actual. Responde UNICAMENTE con JSON:\n{"nombre":"...","telefono":"10 digitos o null","email":"...o null","titulo_derecho":"si|no|no_indicado","tarjeta_profesional":"si|no|no_indicado","anos_experiencia_estimados":0,"experiencia_relevante":"1-2 frases","puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases","alertas":["..."],"potencial_banco_talento":true o false (marca true si el perfil es bueno aunque no encaje en este cargo especifico, para futuras vacantes),"potencial_banco_talento_razon":"1 frase, solo si es true"}';
+function buildCvPrompt(){
+  var perfil=currentProceso&&currentProceso.descripcion?'\n\nPerfil especifico que se busca para este cargo (usalo como criterio principal de calificacion): "'+currentProceso.descripcion+'"':'';
+  return 'Eres asistente de RRHH de Avila Law Consulting. Analiza hojas de vida para el cargo actual.'+perfil+' Responde UNICAMENTE con JSON:\n{"nombre":"...","telefono":"10 digitos o null","email":"...o null","titulo_derecho":"si|no|no_indicado","tarjeta_profesional":"si|no|no_indicado","anos_experiencia_estimados":0,"experiencia_relevante":"1-2 frases","puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases","alertas":["..."],"potencial_banco_talento":true o false (marca true si el perfil es bueno aunque no encaje en este cargo especifico, para futuras vacantes),"potencial_banco_talento_razon":"1 frase, solo si es true"}';
+}
 
 window.analizarCVs=async function(){
   var inp=gid('cv-files');if(!inp)return;
@@ -845,7 +895,7 @@ window.analizarCVs=async function(){
     try{
       var b64=await f2b(file);
       var block=file.type==='application/pdf'?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}:{type:'image',source:{type:'base64',media_type:file.type,data:b64}};
-      var raw=await callAI([{role:'user',content:[block,{type:'text',text:CV_PROMPT}]}],1000);
+      var raw=await callAI([{role:'user',content:[block,{type:'text',text:buildCvPrompt()}]}],1000);
       var p=JSON.parse(raw);
       var cand={id:'cv-'+Date.now()+'-'+i,stage:'cv',nombre:p.nombre||'Sin nombre',fileName:file.name,analizadoEn:nowStr(),cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null,potencialBanco:!!p.potencial_banco_talento,potencialBancoRazon:p.potencial_banco_talento_razon||''}};
       var idx=cands.findIndex(function(c){return c.fileName===file.name;});
@@ -1227,7 +1277,7 @@ window.kbDrop=async function(e,colId){
 function buildDriveSection(){
   if(!CFG.gClientId)return '<div class="tip">Conecta Google Drive desde Configuración (⚙) para leer hojas de vida directamente de la carpeta RRHH, sin subirlas.</div>';
   if(!drive.token)return '<div class="tip">Google Drive no está conectado todavía. <button class="lbtn" onclick="driveConnect()">Conectar ahora</button></div>';
-  return '<div class="card"><h4 style="font-size:14px;margin-bottom:10px">Analizar un CV pegando su link de Google Drive</h4><div class="field"><label>Link de Google Drive del CV</label><input type="text" id="drive-link-input" placeholder="https://drive.google.com/file/d/..."></div><button class="btn sm gold" id="drive-link-btn" onclick="analizarDesdeLinkDrive()">Analizar desde el link</button><div id="drive-link-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>';
+  return '<div class="card"><h4 style="font-size:14px;margin-bottom:10px">Analizar un CV pegando su link de Google Drive</h4><div class="field"><label>Link de Google Drive del CV</label><input type="text" id="drive-link-input" placeholder="https://drive.google.com/file/d/..." onkeydown="if(event.key===\'Enter\'){event.preventDefault();analizarDesdeLinkDrive();}"></div><button class="btn sm gold" id="drive-link-btn" onclick="analizarDesdeLinkDrive()">Analizar desde el link</button><div id="drive-link-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>';
 }
 function driveExtractFileId(url){
   var m=String(url||'').match(/\/d\/([a-zA-Z0-9_-]{10,})/)||String(url||'').match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
