@@ -577,10 +577,6 @@ async function driveFetchFileBase64(fileId){
   var blob=await r.blob();
   return new Promise(function(res,rej){var rd=new FileReader();rd.onload=function(){res(rd.result.split(',')[1]);};rd.onerror=rej;rd.readAsDataURL(blob);});
 }
-window.driveListUnmatched=function(){
-  var matchedIds={};cands.forEach(function(c){if(c.driveFileId)matchedIds[c.driveFileId]=true;});
-  return (drive.files||[]).filter(function(f){return !matchedIds[f.id];});
-};
 window.analizarDesdeDrive=async function(fileId,fileName){
   var btn=gid('drive-an-'+fileId);if(btn){btn.disabled=true;btn.textContent='Analizando...';}
   try{
@@ -801,7 +797,7 @@ window.analizarCVs=async function(){
       var idx=cands.findIndex(function(c){return c.fileName===file.name;});
       if(idx>=0)cands[idx]=cand;else cands.unshift(cand);
       await guardarCandidato(cand);
-    }catch(e){console.error(e);}
+    }catch(e){console.error(e);alert('Error analizando '+file.name+': '+e.message+(!CFG.anthropicKey&&!CFG.geminiKey?' (configura una API Key de IA en Configuración ⚙)':''));}
   }
   if(btn)btn.disabled=false;
   if(gid('cv-ld'))gid('cv-ld').textContent='';
@@ -1144,12 +1140,7 @@ window.kbDrop=async function(e,colId){
 function buildDriveSection(){
   if(!CFG.gClientId)return '<div class="tip">Conecta Google Drive desde Configuración (⚙) para leer hojas de vida directamente de la carpeta RRHH, sin subirlas.</div>';
   if(!drive.token)return '<div class="tip">Google Drive no está conectado todavía. <button class="lbtn" onclick="driveConnect()">Conectar ahora</button></div>';
-  var linkBox='<div class="card"><h4 style="font-size:14px;margin-bottom:10px">Analizar un CV pegando su link de Google Drive</h4><div class="field"><label>Link de Google Drive del CV</label><input type="text" id="drive-link-input" placeholder="https://drive.google.com/file/d/..."></div><button class="btn sm gold" id="drive-link-btn" onclick="analizarDesdeLinkDrive()">Analizar desde el link</button><div id="drive-link-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>';
-  var unmatched=driveListUnmatched();
-  var listBox=!unmatched.length?'<div class="tip">Google Drive conectado. No hay PDFs nuevos sin emparejar en la carpeta RRHH.</div>':'<div class="card"><h4 style="font-size:14px;margin-bottom:10px">PDFs en Drive sin candidato (analizar directo, sin subir)</h4>'+unmatched.map(function(f){
-    return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px"><span>'+esc(f.name)+'</span><button class="btn sm gold" id="drive-an-'+f.id+'" onclick="analizarDesdeDrive(\''+f.id+'\',\''+esc(f.name).replace(/'/g,"\\'")+'\')">Analizar</button></div>';
-  }).join('')+'</div>';
-  return linkBox+listBox;
+  return '<div class="card"><h4 style="font-size:14px;margin-bottom:10px">Analizar un CV pegando su link de Google Drive</h4><div class="field"><label>Link de Google Drive del CV</label><input type="text" id="drive-link-input" placeholder="https://drive.google.com/file/d/..."></div><button class="btn sm gold" id="drive-link-btn" onclick="analizarDesdeLinkDrive()">Analizar desde el link</button><div id="drive-link-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>';
 }
 function driveExtractFileId(url){
   var m=String(url||'').match(/\/d\/([a-zA-Z0-9_-]{10,})/)||String(url||'').match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
@@ -1171,14 +1162,13 @@ window.analizarDesdeLinkDrive=async function(){
   if(btn)btn.disabled=false;if(ld)ld.textContent='';
 };
 function buildCvTab(){
-  var cvs=cands.slice().sort(function(a,b){return(b.cv&&b.cv.puntaje||0)-(a.cv&&a.cv.puntaje||0);});
+  var cvs=cands.filter(function(c){return c.cv&&c.cv.veredicto==='no_citar';}).sort(function(a,b){return(b.cv&&b.cv.puntaje||0)-(a.cv&&a.cv.puntaje||0);});
   var cards='';
   cvs.forEach(function(c){
-    var cv=c.cv||{},bc=cvBadge(cv.veredicto),pct=Math.min(cv.puntaje||0,100),cited=c.stage!=='cv';
-    var vd2=bc==='green'?'apto':bc==='amber'?'reservas':'noapto';
-    cards+='<div class="cand-card"><div style="height:4px;background:var(--cream)"><div class="bar-f '+bc+'" style="width:'+pct+'%;height:100%;background:'+(bc==='green'?'var(--green)':bc==='amber'?'var(--amber)':'var(--red)')+'"></div></div><div class="cand-top"><div><span class="cand-name">'+esc(c.nombre)+'</span><div style="font-size:11.5px;color:var(--ink2);margin-top:2px">'+esc(c.fileName)+' - '+esc(c.analizadoEn)+'</div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-family:Source Serif 4,serif;font-size:22px;font-weight:700;color:'+vColor(vd2)+'">'+(cv.puntaje||0)+'</span><span class="badge '+bc+'">'+cvLabel(cv.veredicto)+'</span></div></div><div class="cand-acts">'+(cited?'<span class="badge grey">En proceso</span> <button class="lbtn" onclick="tab=\'pipeline\';render()">Ver en Pipeline</button>':(cv.veredicto!=='no_citar'?'<button class="btn sm green" onclick="citarCandidato(\''+c.id+'\')">Citar</button>':''))+' <button class="lbtn" onclick="toggleDetCvd(\''+c.id+'\')">Ver analisis</button> <button class="lbtn red" onclick="eliminarCand(\''+c.id+'\')">Eliminar</button></div><div class="cand-detail" id="cvd-'+c.id+'"><div class="dl"><b>Telefono</b><span>'+(cv.telefono||'No indicado')+'</span></div><div class="dl"><b>Experiencia</b><span>'+esc(cv.experiencia||'')+'</span></div><div class="dl"><b>Justificacion</b><span>'+esc(cv.justificacion||'')+'</span></div>'+(cv.alertas&&cv.alertas.length?'<div class="dl"><b>Verificar</b>'+cv.alertas.map(function(a){return '<span>* '+esc(a)+'</span>';}).join('')+'</div>':'')+'</div></div>';
+    var cv=c.cv||{},bc=cvBadge(cv.veredicto),pct=Math.min(cv.puntaje||0,100);
+    cards+='<div class="cand-card"><div style="height:4px;background:var(--cream)"><div class="bar-f '+bc+'" style="width:'+pct+'%;height:100%;background:var(--red)"></div></div><div class="cand-top"><div><span class="cand-name">'+esc(c.nombre)+'</span><div style="font-size:11.5px;color:var(--ink2);margin-top:2px">'+esc(c.fileName)+' - '+esc(c.analizadoEn)+'</div></div><div style="display:flex;align-items:center;gap:8px"><span style="font-family:Source Serif 4,serif;font-size:22px;font-weight:700;color:var(--red)">'+(cv.puntaje||0)+'</span><span class="badge '+bc+'">'+cvLabel(cv.veredicto)+'</span></div></div><div class="cand-acts"><button class="lbtn" onclick="toggleDetCvd(\''+c.id+'\')">Ver analisis</button> <button class="lbtn" onclick="citarCandidato(\''+c.id+'\')">Citar de todas formas</button> <button class="lbtn red" onclick="eliminarCand(\''+c.id+'\')">Eliminar</button></div><div class="cand-detail" id="cvd-'+c.id+'"><div class="dl"><b>Telefono</b><span>'+(cv.telefono||'No indicado')+'</span></div><div class="dl"><b>Experiencia</b><span>'+esc(cv.experiencia||'')+'</span></div><div class="dl"><b>Justificacion</b><span>'+esc(cv.justificacion||'')+'</span></div>'+(cv.alertas&&cv.alertas.length?'<div class="dl"><b>Verificar</b>'+cv.alertas.map(function(a){return '<span>* '+esc(a)+'</span>';}).join('')+'</div>':'')+'</div></div>';
   });
-  return '<div class="card"><h2>Pre-filtro de hojas de vida</h2><p style="font-size:13px;color:var(--ink2);margin:8px 0 14px">Sube las hojas de vida. La IA las analiza frente al perfil del cargo.</p><div class="field"><label>Hojas de vida PDF, PNG o JPG</label><input type="file" id="cv-files" accept=".pdf,.png,.jpg,.jpeg" multiple></div><div style="display:flex;gap:10px;margin-top:10px"><button class="btn" id="cv-btn" onclick="analizarCVs()">Analizar hojas de vida</button></div><div id="cv-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div><div class="tip">La herramienta marca no indicado cuando el CV no lo menciona explicitamente. Confirma siempre los requisitos eliminatorios en la entrevista.</div></div>'+buildDriveSection()+(cvs.length?cards:'<div style="text-align:center;padding:30px;color:var(--ink2)">Aun no hay hojas de vida analizadas.</div>');
+  return '<div class="card"><h2>Pre-filtro de hojas de vida</h2><p style="font-size:13px;color:var(--ink2);margin:8px 0 14px">Sube las hojas de vida. La IA las analiza y las que aprueban pasan automaticamente al Pipeline (columna CV Aptos). Aqui solo quedan las descartadas para tu revision.</p><div class="field"><label>Hojas de vida PDF, PNG o JPG</label><input type="file" id="cv-files" accept=".pdf,.png,.jpg,.jpeg" multiple></div><div style="display:flex;gap:10px;margin-top:10px"><button class="btn" id="cv-btn" onclick="analizarCVs()">Analizar hojas de vida</button></div><div id="cv-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div><div class="tip">La herramienta marca no indicado cuando el CV no lo menciona explicitamente. Confirma siempre los requisitos eliminatorios en la entrevista.</div></div>'+buildDriveSection()+(cvs.length?cards:'<div style="text-align:center;padding:30px;color:var(--ink2)">No hay hojas de vida descartadas por ahora.</div>');
 }
 window.toggleDetCvd=function(id){var el=gid('cvd-'+id);if(el)el.classList.toggle('open');};
 
@@ -1198,38 +1188,21 @@ function buildGestionTab(){
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)"><span style="font-size:16px;min-width:26px">'+medal+'</span><span class="rank-item-name" style="flex:1;font-size:13px;font-weight:700" onclick="mostrarExplicacionRanking(\''+c.id+'\')">'+esc(c.nombre)+'</span><span>'+stIcon+'</span><span style="font-size:11px;color:var(--ink2)">CV:'+(cv.puntaje||0)+(iv.total!=null?' Ent:'+iv.total:'')+(psic.done?' Psico:'+esc(psic.recomendacion):'')+'</span><span style="font-family:Source Serif 4,serif;font-size:17px;font-weight:700;color:'+csCl+';min-width:32px;text-align:right">'+cs+'</span></div>';
   }).join(''):'<div style="padding:30px;text-align:center;color:var(--ink2);font-size:13px">Aun no hay candidatos en entrevista o etapas posteriores.</div>';
   var rankBox='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px">Ranking General</h3><span style="font-size:11px;color:var(--ink2)">CV 20% · Ent. 50% · Psico 30%</span></div>'+rows+'</div>';
-  return kpis+buildRadarChart(ranked)+rankBox;
+  return kpis+buildSkillsChart(ranked)+rankBox;
 }
-var RADAR_COLORS=['#b8924a','#5a3fbf','#2a8f9e','#2a7d44','#b5453f'];
-function buildRadarChart(ranked){
+var SKILL_COLORS=['#2a78d6','#1baf7a','#eda100','#008300','#4a3aa7'];
+function buildSkillsChart(ranked){
   var withScores=ranked.filter(function(c){return c.interview&&c.interview.done&&c.interview.catScores;}).slice(0,5);
   if(!withScores.length)return'';
-  var W=340,H=340,cx=170,cy=170,R=112,n=CATS.length;
-  function angleFor(i){return -Math.PI/2+i*(2*Math.PI/n);}
-  var grid='';
-  [0.25,0.5,0.75,1].forEach(function(f){
-    var pts=CATS.map(function(cat,i){var a=angleFor(i);return(cx+R*f*Math.cos(a)).toFixed(1)+','+(cy+R*f*Math.sin(a)).toFixed(1);}).join(' ');
-    grid+='<polygon points="'+pts+'" fill="none" stroke="#e4ddcd" stroke-width="1"/>';
-  });
-  var axisLines='',axisLabels='';
-  CATS.forEach(function(cat,i){
-    var a=angleFor(i);
-    var x=cx+R*Math.cos(a),y=cy+R*Math.sin(a);
-    axisLines+='<line x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="#e4ddcd" stroke-width="1"/>';
-    var lx=cx+(R+30)*Math.cos(a),ly=cy+(R+30)*Math.sin(a);
-    var anchor=Math.cos(a)>0.3?'start':Math.cos(a)<-0.3?'end':'middle';
-    var words=cat.label.split(' ');
-    axisLabels+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="9.5" fill="#3a3f47" text-anchor="'+anchor+'" font-family="Inter,sans-serif">'+esc(words.join(' '))+'</text>';
-  });
-  var polys='',legend='';
-  withScores.forEach(function(c,idx){
-    var color=RADAR_COLORS[idx%RADAR_COLORS.length];
-    var pts=CATS.map(function(cat,i){var a=angleFor(i);var val=Math.min((c.interview.catScores[cat.id]||0)/100,1);return(cx+R*val*Math.cos(a)).toFixed(1)+','+(cy+R*val*Math.sin(a)).toFixed(1);}).join(' ');
-    polys+='<polygon points="'+pts+'" fill="'+color+'" fill-opacity="0.13" stroke="'+color+'" stroke-width="2"/>';
-    legend+='<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;margin-bottom:5px"><span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0"></span>'+esc(c.nombre)+'</div>';
-  });
-  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:340px;height:auto">'+grid+axisLines+polys+axisLabels+'</svg>';
-  return '<div class="card"><h3 style="font-size:15px;margin-bottom:12px">Mapa de habilidades evaluadas</h3><p style="font-size:12px;color:var(--ink2);margin-bottom:10px">Puntaje por categoria de entrevista (0-100) de los candidatos con entrevista realizada.</p><div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:220px">'+svg+'</div><div>'+legend+'</div></div></div>';
+  var blocks=withScores.map(function(c,idx){
+    var color=SKILL_COLORS[idx%SKILL_COLORS.length];
+    var rows=CATS.map(function(cat){
+      var val=Math.min(c.interview.catScores[cat.id]||0,100);
+      return '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px"><span style="width:150px;flex-shrink:0;font-size:11.5px;color:var(--ink2)">'+esc(cat.label)+'</span><div style="flex:1;background:#eeece4;border-radius:5px;height:14px;position:relative;overflow:hidden"><div style="width:'+val+'%;height:100%;background:'+color+';border-radius:5px"></div></div><span style="width:30px;flex-shrink:0;font-size:11.5px;font-weight:700;text-align:right;color:var(--ink)">'+val+'</span></div>';
+    }).join('');
+    return '<div style="min-width:260px;flex:1 1 320px;padding:12px;border:1px solid var(--line);border-radius:8px;background:#fffdf9"><div style="display:flex;align-items:center;gap:7px;margin-bottom:10px"><span style="width:11px;height:11px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0"></span><b style="font-size:13px">'+esc(c.nombre)+'</b></div>'+rows+'</div>';
+  }).join('');
+  return '<div class="card"><h3 style="font-size:15px;margin-bottom:4px">Mapa de habilidades evaluadas</h3><p style="font-size:12px;color:var(--ink2);margin-bottom:12px">Puntaje por categoria de entrevista (0-100) de los candidatos con entrevista realizada.</p><div style="display:flex;gap:14px;flex-wrap:wrap">'+blocks+'</div></div>';
 }
 window.mostrarExplicacionRanking=function(id){
   var c=findCand(id);if(!c)return;
@@ -1286,8 +1259,8 @@ window.openModal=function(id){
   if(c.descartadoRH){acts='<button class="btn sm ghost" onclick="reactivarCandidato(\''+c.id+'\')">Reactivar</button>';}
   else{
     if(c.stage==='cv')acts+='<button class="btn sm green" onclick="citarCandidato(\''+c.id+'\')">Citar</button>';
-    if(c.stage==='interview'){acts+='<button class="btn sm" onclick="closeModalDirect();openInterviewForm(\''+c.id+'\')">'+( iv.done?'Ver entrevista':'Realizar entrevista')+'</button>';if(iv.done&&(iv.verdict==='apto'||iv.verdict==='reservas'))acts+='<button class="btn sm green" onclick="enviarAPsic(\''+c.id+'\')">Pruebas Psico</button>';}
-    if(c.stage==='psic'){acts+='<button class="btn sm" onclick="closeModalDirect();openPsicForm(\''+c.id+'\')">'+( psic.done?'Ver pruebas':'Cargar pruebas')+'</button>';if(psic.done&&psic.recomendacion==='Avanzar')acts+='<button class="btn sm green" onclick="enviarAFinal(\''+c.id+'\')">Informe Final</button>';}
+    if(c.stage!=='cv'){acts+='<button class="btn sm" onclick="closeModalDirect();openInterviewForm(\''+c.id+'\')">'+( iv.done?'Ver entrevista':'Realizar entrevista')+'</button>';if(c.stage==='interview'&&iv.done&&(iv.verdict==='apto'||iv.verdict==='reservas'))acts+='<button class="btn sm green" onclick="enviarAPsic(\''+c.id+'\')">Pruebas Psico</button>';}
+    if(c.stage==='psic'||c.stage==='final'){acts+='<button class="btn sm" onclick="closeModalDirect();openPsicForm(\''+c.id+'\')">'+( psic.done?'Ver pruebas':'Cargar pruebas')+'</button>';if(c.stage==='psic'&&psic.done&&psic.recomendacion==='Avanzar')acts+='<button class="btn sm green" onclick="enviarAFinal(\''+c.id+'\')">Informe Final</button>';}
     if(c.stage!=='cv')acts+='<button class="btn sm" style="background:var(--red)" onclick="descartarModal(\''+c.id+'\')">Descalificar</button>';
   }
   if(cv.telefono)acts+='<a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a>';
@@ -1302,7 +1275,7 @@ window.closeModalDirect=function(){gid('modal-overlay').classList.remove('open')
 /* ══ RENDER ══ */
 function render(){
   var tabs=gid('crm-tabs'),mb=gid('crm-main');if(!tabs||!mb)return;
-  var nCV=cands.filter(function(c){return c.stage==='cv';}).length;
+  var nCV=cands.filter(function(c){return c.cv&&c.cv.veredicto==='no_citar';}).length;
   tabs.innerHTML='';
   [['prefiltro','📄 Pre-filtro',nCV],['pipeline','📋 Pipeline',cands.length],['gestion','🏆 Ranking',null]].forEach(function(t){
     var btn=document.createElement('button');btn.className='tab-btn'+(tab===t[0]?' on':'');
