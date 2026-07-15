@@ -413,6 +413,7 @@ var tab='pipeline';
 var formId=null;
 var psicFiles={};
 var psicLinks={};
+var psicLinkEditing={};
 var modalId=null;
 var driveLinkEditing=null;
 
@@ -666,17 +667,40 @@ window.abrirBancoTalento=async function(){
   renderBancoTalento();
 };
 function renderBancoTalento(){
-  var list=bancoTalentoCache;
+  var list=bancoTalentoCache.slice().sort(function(a,b){return composite(b)-composite(a);});
   var body=!list.length?'<div style="padding:20px;text-align:center;color:var(--ink2)">Aun no hay candidatos guardados en el Banco de Talento.</div>'
-    :list.map(function(c){
-      var cv=c.cv||{};
+    :list.map(function(c,i){
+      var cv=c.cv||{},cs=composite(c),csCl=cs>=75?'#2a7d44':cs>=55?'#b9842c':'#b5453f';
+      var medals=['🥇','🥈','🥉'];var medal=i<3?medals[i]:(i+1)+'.';
       return '<div class="history-item" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
-        +'<div><b style="font-size:13.5px">'+esc(c.nombre)+'</b><div style="font-size:11px;color:var(--ink2)">'+esc(c.bancoTalentoOrigenCargo||'')+(cv.puntaje!=null?' · CV '+cv.puntaje:'')+(c.bancoTalentoFecha?' · '+esc(c.bancoTalentoFecha):'')+'</div></div>'
-        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+(cv.telefono?'<a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+'<button class="lbtn red" onclick="quitarDeBancoTalento(\''+c.id+'\')">Quitar</button></div>'
+        +'<div style="display:flex;align-items:center;gap:10px"><span style="font-size:15px;min-width:24px">'+medal+'</span><div><b class="rank-item-name" style="font-size:13.5px" onclick="mostrarResumenBanco(\''+c.id+'\')">'+esc(c.nombre)+'</b><div style="font-size:11px;color:var(--ink2)">'+esc(c.bancoTalentoOrigenCargo||'')+(c.bancoTalentoFecha?' · '+esc(c.bancoTalentoFecha):'')+'</div></div></div>'
+        +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-family:Source Serif 4,serif;font-size:16px;font-weight:700;color:'+csCl+'">'+cs+'</span>'+(cv.telefono?'<a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+'<button class="lbtn red" onclick="quitarDeBancoTalento(\''+c.id+'\')">Quitar</button></div>'
         +'</div>';
     }).join('');
-  gid('modal-body').innerHTML='<div class="modal-section"><div class="modal-section-title">Candidatos guardados de todos los procesos ('+list.length+')</div>'+body+'</div>';
+  gid('modal-name').textContent='💼 Banco de Talento';
+  gid('modal-body').innerHTML='<div class="modal-section"><div class="modal-section-title">Candidatos guardados de todos los procesos ('+list.length+'), ordenados por puntaje</div>'+body+'</div>';
+  gid('modal-actions').innerHTML='<button class="btn sm ghost" onclick="closeModalDirect()">Cerrar</button>';
 }
+window.mostrarResumenBanco=function(id){
+  var c=bancoTalentoCache.find(function(x){return x.id===id;});if(!c)return;
+  var cv=c.cv||{},iv=c.interview||{},psic=c.psic||{};
+  var body='<div class="modal-section"><div class="modal-section-title">Origen</div><div class="history-item" style="font-size:12.5px;color:var(--ink2)">Proceso: '+esc(c.bancoTalentoOrigenCargo||'No indicado')+' · Guardado: '+esc(c.bancoTalentoFecha||'')+(cv.telefono?'<br>'+esc(cv.telefono)+(cv.email?' · '+esc(cv.email):''):'')+'</div></div>';
+  body+='<div class="modal-section"><div class="modal-section-title">Hoja de Vida</div><div class="history-item">'+(cv.puntaje!=null?'<span class="badge '+scoreClass(cv.puntaje)+'">CV: '+cv.puntaje+'</span> ':'')+(cv.justificacion?'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">'+esc(cv.justificacion)+'</p>':'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">Sin analisis de CV guardado.</p>')+'</div></div>';
+  if(iv.done){
+    body+='<div class="modal-section"><div class="modal-section-title">Entrevista</div><div class="history-item"><span class="badge '+scoreClass(iv.total)+'">Ent.: '+iv.total+'</span> <span class="badge '+vClass(iv.verdict||'')+'">'+esc(iv.verdictLabel||'')+'</span>'+(iv.notes?'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">'+esc(iv.notes)+'</p>':'')+'</div></div>';
+  }else{
+    body+='<div class="modal-section"><div class="modal-section-title">Entrevista</div><div class="history-item" style="font-size:12.5px;color:var(--ink2)">No fue entrevistado(a) en su proceso de origen.</div></div>';
+  }
+  if(psic.done){
+    body+='<div class="modal-section"><div class="modal-section-title">Pruebas Psicometricas</div><div class="history-item"><span class="badge '+(psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red')+'">'+esc(psic.recomendacion)+'</span>'+(psic.conclusion?'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">'+esc(psic.conclusion)+'</p>':'')+'</div></div>';
+  }
+  if(c.descartadoRH){
+    body+='<div class="modal-section"><div class="modal-section-title">Que paso</div><div class="history-item" style="font-size:12.5px;color:var(--red)">Descartado(a): '+esc(c.descartadoRHRazon||'Sin razon especificada.')+'</div></div>';
+  }
+  gid('modal-name').textContent=c.nombre+' — Banco de Talento';
+  gid('modal-body').innerHTML=body;
+  gid('modal-actions').innerHTML='<button class="btn sm ghost" onclick="renderBancoTalento()">← Volver al Banco de Talento</button>'+(cv.telefono?'<a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'');
+};
 window.quitarDeBancoTalento=async function(id){
   var c=bancoTalentoCache.find(function(x){return x.id===id;});if(!c)return;
   c.enBancoTalento=false;
@@ -847,7 +871,7 @@ window.reactivarCandidato=async function(id){
 
 /* ══ ENTREVISTA FORM ══ */
 window.openInterviewForm=function(id){formId=id;tab='form-interview';render();};
-window.openPsicForm=function(id){psicFiles={};psicLinks={};formId=id;tab='form-psic';render();};
+window.openPsicForm=function(id){psicFiles={};psicLinks={};psicLinkEditing={};formId=id;tab='form-psic';render();};
 window.goBackFromForm=function(){tab='pipeline';formId=null;render();};
 window.goTab=function(t){tab=t;formId=null;render();};
 
@@ -904,14 +928,21 @@ function buildPsicForm(){
   var results='';
   if(psic.done&&psic.tests){var rc={Avanzar:'g',Revisar:'a','No avanzar':'r'}[psic.recomendacion]||'a';results='<div class="card"><h4 style="font-size:15px;margin-bottom:12px">Resultado del analisis</h4><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="badge '+rc+'">'+esc(psic.recomendacion)+'</span><span style="font-size:13px;font-weight:600">'+esc(psic.conclusion)+'</span></div><p style="font-size:13px;color:var(--ink2)">'+esc(psic.justificacion)+'</p>'+(psic.tests||[]).map(function(t){var tc=t.adecuacion==='Alta'?'g':t.adecuacion==='Media'?'a':'r';return '<div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:8px"><div style="display:flex;gap:8px;margin-bottom:4px"><b>'+esc(t.nombre)+'</b><span class="badge '+tc+'">'+esc(t.adecuacion)+'</span></div><p style="font-size:12px;color:var(--ink2)">'+esc(t.interpretacion)+'</p>'+(t.fortalezas&&t.fortalezas.length?'<div style="font-size:12px;color:var(--green);margin-top:4px">OK: '+t.fortalezas.map(esc).join(' | ')+'</div>':'')+(t.riesgos&&t.riesgos.length?'<div style="font-size:12px;color:var(--red);margin-top:2px">Riesgos: '+t.riesgos.map(esc).join(' | ')+'</div>':'')+'</div>';}).join('')+'</div>';}
   var uploads=['KOSTICK'].map(function(t){
-    var linkInput=(CFG.gClientId&&drive.token)?'<input type="text" id="psic-link-'+t+'" placeholder="o pegar link de Google Drive" style="margin-top:6px;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--cream)" onchange="onPsicLink(\''+t+'\',this)">':'';
-    var savedLink=(c.psic&&c.psic.links&&c.psic.links[t])?'<div style="margin-top:4px"><a class="drive-badge" href="'+esc(c.psic.links[t])+'" target="_blank" rel="noopener">📎 Link guardado</a></div>':'';
-    return '<div class="psic-row" style="padding:10px;background:var(--cream);border-radius:7px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px"><b style="min-width:140px;font-size:13.5px">'+t+'</b><input type="file" accept=".pdf,.png,.jpg,.jpeg" onchange="onPsicFile(\''+t+'\',this)"></div>'+linkInput+savedLink+'</div>';
+    var existing=(c.psic&&c.psic.links&&c.psic.links[t])||'';
+    var editing=!!psicLinkEditing[t];
+    var linkArea;
+    if(existing&&!editing){
+      linkArea='<div style="margin-top:4px"><a class="drive-badge" href="'+esc(existing)+'" target="_blank" rel="noopener">📎 Link guardado</a> <button class="lbtn" onclick="editarPsicLink(\''+t+'\')">Cambiar</button></div>';
+    }else{
+      linkArea=(CFG.gClientId&&drive.token)?'<input type="text" id="psic-link-'+t+'" value="'+esc(existing)+'" placeholder="o pegar link de Google Drive" style="margin-top:6px;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--cream)" onchange="onPsicLink(\''+t+'\',this)">':'';
+    }
+    return '<div class="psic-row" style="padding:10px;background:var(--cream);border-radius:7px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px"><b style="min-width:140px;font-size:13.5px">'+t+'</b><input type="file" accept=".pdf,.png,.jpg,.jpeg" onchange="onPsicFile(\''+t+'\',this)"></div>'+linkArea+'</div>';
   }).join('');
   return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button class="btn ghost sm" onclick="goBackFromForm()">← Volver</button></div><div class="card"><h2>Pruebas Psicometricas</h2><p style="font-size:13px;color:var(--ink2);margin-top:4px">'+esc(c.nombre)+' - '+nowStr()+'</p><div style="margin-top:8px;font-size:13px">CV: '+(c.cv&&c.cv.puntaje||0)+'/100 | Entrevista: '+(iv.total||0)+'/100 | '+esc(iv.verdictLabel||'')+'</div></div><div class="card"><h4 style="font-size:15px;margin-bottom:12px">Subir resultados de pruebas (archivo o link de Drive)</h4>'+uploads+'<div style="display:flex;gap:10px;margin-top:14px"><button class="btn gold" id="psic-btn" onclick="analizarPruebas(\''+c.id+'\')">Analizar con IA</button></div><div id="psic-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>'+results;
 }
 window.onPsicFile=function(t,inp){if(inp.files&&inp.files[0])psicFiles[t]=inp.files[0];};
 window.onPsicLink=function(t,inp){var v=inp.value.trim();if(v)psicLinks[t]=v;else delete psicLinks[t];};
+window.editarPsicLink=function(t){psicLinkEditing[t]=true;render();};
 window.analizarPruebas=async function(id){
   var c=findCand(id);if(!c)return;
   if(!Object.keys(psicFiles).length&&!Object.keys(psicLinks).length){alert('Sube al menos un resultado o pega un link de Drive.');return;}
