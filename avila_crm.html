@@ -876,10 +876,24 @@ window.descartarModal=function(id){
   var razon=prompt('Razon de descalificacion:','');if(razon===null)return;if(!razon.trim()){alert('Escribe una razon.');return;}
   var c=findCand(id);if(!c)return;c.descartadoRH=true;c.descartadoRHRazon=razon.trim();c.descartadoRHFecha=nowStr();
   if(c.interview){c.interview.verdict='noapto';c.interview.verdictLabel='Descartada por RRHH';}
-  if(!c.enBancoTalento&&confirm('¿Guardar tambien este candidato en el Banco de Talento para futuras vacantes?')){
-    c.enBancoTalento=true;c.bancoTalentoFecha=nowStr();c.bancoTalentoOrigenCargo=currentProceso&&currentProceso.cargo||'';
-  }
-  guardarCandidato(c).then(function(){closeModalDirect();render();});
+  (async function(){
+    if(c.origenBancoId){
+      try{
+        var r=await fetch(SB_URL+'/rest/v1/Candidatos?id=eq.'+c.origenBancoId,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+        var rows=await r.json();
+        if(rows[0]){
+          var original=rows[0].data;
+          original=Object.assign({},original,{cv:c.cv||original.cv,interview:c.interview||original.interview,psic:c.psic||original.psic,driveLink:c.driveLink||original.driveLink,driveFileId:c.driveFileId||original.driveFileId,notas:c.notas||original.notas,bancoTalentoFecha:nowStr(),bancoTalentoOrigenCargo:currentProceso&&currentProceso.cargo||original.bancoTalentoOrigenCargo});
+          original._sbid=rows[0].id;
+          await guardarCandidatoGlobal(original);
+        }
+      }catch(e){console.warn('Error actualizando Banco de Talento',e);}
+    }else if(!c.enBancoTalento&&confirm('¿Guardar tambien este candidato en el Banco de Talento para futuras vacantes?')){
+      c.enBancoTalento=true;c.bancoTalentoFecha=nowStr();c.bancoTalentoOrigenCargo=currentProceso&&currentProceso.cargo||'';
+    }
+    await guardarCandidato(c);
+    closeModalDirect();render();
+  })();
 };
 window.reactivarCandidato=async function(id){
   var c=findCand(id);if(!c)return;c.descartadoRH=false;c.descartadoRHRazon='';
