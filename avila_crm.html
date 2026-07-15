@@ -672,8 +672,9 @@ function renderBancoTalento(){
     :list.map(function(c,i){
       var cv=c.cv||{},cs=composite(c),csCl=cs>=75?'#2a7d44':cs>=55?'#b9842c':'#b5453f';
       var medals=['🥇','🥈','🥉'];var medal=i<3?medals[i]:(i+1)+'.';
+      var links=(c.driveLink?'<a class="drive-badge" href="'+esc(c.driveLink)+'" target="_blank" rel="noopener">📎 CV</a> ':'')+((c.psic&&c.psic.links&&c.psic.links.KOSTICK)?'<a class="drive-badge" href="'+esc(c.psic.links.KOSTICK)+'" target="_blank" rel="noopener">📎 Kostick</a>':'');
       return '<div class="history-item" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
-        +'<div style="display:flex;align-items:center;gap:10px"><span style="font-size:15px;min-width:24px">'+medal+'</span><div><b class="rank-item-name" style="font-size:13.5px" onclick="mostrarResumenBanco(\''+c.id+'\')">'+esc(c.nombre)+'</b><div style="font-size:11px;color:var(--ink2)">'+esc(c.bancoTalentoOrigenCargo||'')+(c.bancoTalentoFecha?' · '+esc(c.bancoTalentoFecha):'')+'</div></div></div>'
+        +'<div style="display:flex;align-items:center;gap:10px"><span style="font-size:15px;min-width:24px">'+medal+'</span><div><b class="rank-item-name" style="font-size:13.5px" onclick="mostrarResumenBanco(\''+c.id+'\')">'+esc(c.nombre)+'</b><div style="font-size:11px;color:var(--ink2)">'+esc(c.bancoTalentoOrigenCargo||'')+(c.bancoTalentoFecha?' · '+esc(c.bancoTalentoFecha):'')+'</div>'+(links?'<div style="margin-top:4px">'+links+'</div>':'')+'</div></div>'
         +'<div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap"><span style="font-family:Source Serif 4,serif;font-size:16px;font-weight:700;color:'+csCl+'">'+cs+'</span>'+(cv.telefono?'<a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+'<button class="lbtn red" onclick="quitarDeBancoTalento(\''+c.id+'\')">Quitar</button></div>'
         +'</div>';
     }).join('');
@@ -685,14 +686,14 @@ window.mostrarResumenBanco=function(id){
   var c=bancoTalentoCache.find(function(x){return x.id===id;});if(!c)return;
   var cv=c.cv||{},iv=c.interview||{},psic=c.psic||{};
   var body='<div class="modal-section"><div class="modal-section-title">Origen</div><div class="history-item" style="font-size:12.5px;color:var(--ink2)">Proceso: '+esc(c.bancoTalentoOrigenCargo||'No indicado')+' · Guardado: '+esc(c.bancoTalentoFecha||'')+(cv.telefono?'<br>'+esc(cv.telefono)+(cv.email?' · '+esc(cv.email):''):'')+'</div></div>';
-  body+='<div class="modal-section"><div class="modal-section-title">Hoja de Vida</div><div class="history-item">'+(cv.puntaje!=null?'<span class="badge '+scoreClass(cv.puntaje)+'">CV: '+cv.puntaje+'</span> ':'')+(cv.justificacion?'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">'+esc(cv.justificacion)+'</p>':'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">Sin analisis de CV guardado.</p>')+'</div></div>';
+  body+='<div class="modal-section"><div class="modal-section-title">Hoja de Vida</div><div class="history-item">'+(cv.puntaje!=null?'<span class="badge '+scoreClass(cv.puntaje)+'">CV: '+cv.puntaje+'</span> ':'')+(cv.justificacion?'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">'+esc(cv.justificacion)+'</p>':'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">Sin analisis de CV guardado.</p>')+(c.driveLink?'<p style="margin-top:6px"><a class="drive-badge" href="'+esc(c.driveLink)+'" target="_blank" rel="noopener">📎 Ver CV en Google Drive</a></p>':'')+'</div></div>';
   if(iv.done){
     body+='<div class="modal-section"><div class="modal-section-title">Entrevista</div><div class="history-item"><span class="badge '+scoreClass(iv.total)+'">Ent.: '+iv.total+'</span> <span class="badge '+vClass(iv.verdict||'')+'">'+esc(iv.verdictLabel||'')+'</span>'+(iv.notes?'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">'+esc(iv.notes)+'</p>':'')+'</div></div>';
   }else{
     body+='<div class="modal-section"><div class="modal-section-title">Entrevista</div><div class="history-item" style="font-size:12.5px;color:var(--ink2)">No fue entrevistado(a) en su proceso de origen.</div></div>';
   }
-  if(psic.done){
-    body+='<div class="modal-section"><div class="modal-section-title">Pruebas Psicometricas</div><div class="history-item"><span class="badge '+(psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red')+'">'+esc(psic.recomendacion)+'</span>'+(psic.conclusion?'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">'+esc(psic.conclusion)+'</p>':'')+'</div></div>';
+  if(psic.done||(psic.links&&psic.links.KOSTICK)){
+    body+='<div class="modal-section"><div class="modal-section-title">Pruebas Psicometricas</div><div class="history-item">'+(psic.done?'<span class="badge '+(psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red')+'">'+esc(psic.recomendacion)+'</span>':'')+(psic.conclusion?'<p style="font-size:12.5px;color:var(--ink2);margin-top:6px">'+esc(psic.conclusion)+'</p>':'')+(psic.links&&psic.links.KOSTICK?'<p style="margin-top:6px"><a class="drive-badge" href="'+esc(psic.links.KOSTICK)+'" target="_blank" rel="noopener">📎 Ver Kostick en Google Drive</a></p>':'')+'</div></div>';
   }
   if(c.descartadoRH){
     body+='<div class="modal-section"><div class="modal-section-title">Que paso</div><div class="history-item" style="font-size:12.5px;color:var(--red)">Descartado(a): '+esc(c.descartadoRHRazon||'Sin razon especificada.')+'</div></div>';
