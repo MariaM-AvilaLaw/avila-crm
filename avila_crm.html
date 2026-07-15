@@ -515,13 +515,27 @@ window.driveConnect=function(){
   if(!tc){alert('Configura primero el Google OAuth Client ID en Configuración (⚙).');return;}
   tc.requestAccessToken({prompt:'consent'});
 };
-async function driveFetchFiles(){
-  if(!drive.token)return[];
-  var q=encodeURIComponent("'"+(CFG.gFolderId||DRIVE_FOLDER_DEFAULT)+"' in parents and mimeType='application/pdf' and trashed=false");
-  var r=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name,webViewLink)&pageSize=1000',{headers:{'Authorization':'Bearer '+drive.token}});
+async function driveListFolderChildren(folderId){
+  var q=encodeURIComponent("'"+folderId+"' in parents and trashed=false");
+  var r=await fetch('https://www.googleapis.com/drive/v3/files?q='+q+'&fields=files(id,name,mimeType,webViewLink)&pageSize=1000',{headers:{'Authorization':'Bearer '+drive.token}});
   if(!r.ok)throw new Error('Drive error '+r.status);
   var d=await r.json();
   return d.files||[];
+}
+async function driveFetchFiles(){
+  if(!drive.token)return[];
+  var rootId=CFG.gFolderId||DRIVE_FOLDER_DEFAULT;
+  var pdfs=[],queue=[rootId],seen={};
+  while(queue.length){
+    var folderId=queue.shift();
+    if(seen[folderId])continue;seen[folderId]=true;
+    var children=await driveListFolderChildren(folderId);
+    children.forEach(function(f){
+      if(f.mimeType==='application/vnd.google-apps.folder')queue.push(f.id);
+      else if(f.mimeType==='application/pdf')pdfs.push(f);
+    });
+  }
+  return pdfs;
 }
 async function driveSyncAll(){
   if(!drive.token||!currentProceso)return;
