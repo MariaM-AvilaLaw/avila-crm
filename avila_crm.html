@@ -1117,9 +1117,9 @@ function buildGestionTab(){
   var rows=ranked.length?ranked.map(function(c,i){
     var cs=composite(c),csCl=cs>=75?'#2a7d44':cs>=55?'#b9842c':'#b5453f';
     var medals=['🥇','🥈','🥉'];var medal=i<3?medals[i]:(i+1)+'.';
-    var iv=c.interview||{},cv=c.cv||{};
+    var iv=c.interview||{},cv=c.cv||{},psic=c.psic||{};
     var stIcon=c.stage==='final'?'✅':c.stage==='psic'?'🧠':iv.done?'🗣':c.scheduled?'📅':'⏳';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)"><span style="font-size:16px;min-width:26px">'+medal+'</span><span class="rank-item-name" style="flex:1;font-size:13px;font-weight:700" onclick="mostrarExplicacionRanking(\''+c.id+'\')">'+esc(c.nombre)+'</span><span>'+stIcon+'</span><span style="font-size:11px;color:var(--ink2)">CV:'+(cv.puntaje||0)+(iv.total!=null?' Ent:'+iv.total:'')+'</span><span style="font-family:Source Serif 4,serif;font-size:17px;font-weight:700;color:'+csCl+';min-width:32px;text-align:right">'+cs+'</span></div>';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)"><span style="font-size:16px;min-width:26px">'+medal+'</span><span class="rank-item-name" style="flex:1;font-size:13px;font-weight:700" onclick="mostrarExplicacionRanking(\''+c.id+'\')">'+esc(c.nombre)+'</span><span>'+stIcon+'</span><span style="font-size:11px;color:var(--ink2)">CV:'+(cv.puntaje||0)+(iv.total!=null?' Ent:'+iv.total:'')+(psic.done?' Psico:'+esc(psic.recomendacion):'')+'</span><span style="font-family:Source Serif 4,serif;font-size:17px;font-weight:700;color:'+csCl+';min-width:32px;text-align:right">'+cs+'</span></div>';
   }).join(''):'<div style="padding:30px;text-align:center;color:var(--ink2);font-size:13px">Aun no hay candidatos en entrevista o etapas posteriores.</div>';
   var rankBox='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px">Ranking General</h3><span style="font-size:11px;color:var(--ink2)">CV 20% · Ent. 50% · Psico 30%</span></div>'+rows+'</div>';
   return kpis+buildRadarChart(ranked)+rankBox;
