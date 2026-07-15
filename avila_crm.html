@@ -261,7 +261,10 @@ h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
     <div class="procesos-wrap">
       <div class="procesos-header">
         <h2>Procesos de Selección</h2>
-        <button class="btn gold" onclick="abrirModalProceso()">+ Nuevo proceso</button>
+        <div style="display:flex;gap:8px">
+          <button class="btn ghost" onclick="abrirBancoTalento()">💼 Banco de Talento</button>
+          <button class="btn gold" onclick="abrirModalProceso()">+ Nuevo proceso</button>
+        </div>
       </div>
       <div id="lista-procesos"></div>
     </div>
@@ -273,6 +276,7 @@ h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
       <button class="back-btn" onclick="volverAProcesos()">← Procesos</button>
       <span style="color:var(--line)">|</span>
       <span id="proceso-titulo" style="font-size:13px;font-weight:600;color:var(--ink)"></span>
+      <button class="btn ghost sm" style="margin-left:auto" onclick="abrirBancoTalentoParaProceso()">💼 Avisar Banco de Talento</button>
     </div>
     <div class="crm-tabs" id="crm-tabs"></div>
     <div id="crm-main"></div>
@@ -471,6 +475,15 @@ async function guardarCandidato(c){
   await sbUpsert('Candidatos',[{id:c._sbid||c.id,data:Object.assign({},c,{tipo:'candidato',procesoId:currentProceso._id})}]);
 }
 
+async function guardarCandidatoGlobal(c){
+  await sbUpsert('Candidatos',[{id:c._sbid||c.id,data:Object.assign({},c,{tipo:'candidato'})}]);
+}
+
+async function cargarBancoTalento(){
+  var rows=await sbGet('Candidatos');
+  return rows.filter(function(r){return r.data&&r.data.tipo==='candidato'&&r.data.enBancoTalento;}).map(function(r){var d=r.data;d._sbid=r.id;return d;});
+}
+
 async function saveCands(){
   showSync();
   for(var i=0;i<cands.length;i++){
@@ -575,7 +588,7 @@ window.analizarDesdeDrive=async function(fileId,fileName){
     var block={type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}};
     var raw=await callAI([{role:'user',content:[block,{type:'text',text:CV_PROMPT}]}],1000);
     var p=JSON.parse(raw);
-    var cand={id:'cv-'+Date.now(),stage:'cv',nombre:p.nombre||fileName,fileName:fileName,analizadoEn:nowStr(),driveLink:'https://drive.google.com/file/d/'+fileId+'/view',driveFileId:fileId,cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null}};
+    var cand={id:'cv-'+Date.now(),stage:'cv',nombre:p.nombre||fileName,fileName:fileName,analizadoEn:nowStr(),driveLink:'https://drive.google.com/file/d/'+fileId+'/view',driveFileId:fileId,cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null,potencialBanco:!!p.potencial_banco_talento,potencialBancoRazon:p.potencial_banco_talento_razon||''}};
     cands.unshift(cand);
     await guardarCandidato(cand);
     render();
@@ -633,6 +646,54 @@ function renderProcesos(){
       +'</div>';
   }).join('');
 }
+
+/* ══ BANCO DE TALENTO (GLOBAL) ══ */
+var bancoTalentoCache=[];
+window.abrirBancoTalento=async function(){
+  gid('modal-name').textContent='💼 Banco de Talento';
+  gid('modal-body').innerHTML='<div style="padding:20px;text-align:center;color:var(--ink2)">Cargando...</div>';
+  gid('modal-actions').innerHTML='<button class="btn sm ghost" onclick="closeModalDirect()">Cerrar</button>';
+  gid('modal-overlay').classList.add('open');
+  try{bancoTalentoCache=await cargarBancoTalento();}catch(e){bancoTalentoCache=[];}
+  renderBancoTalento();
+};
+function renderBancoTalento(){
+  var list=bancoTalentoCache;
+  var body=!list.length?'<div style="padding:20px;text-align:center;color:var(--ink2)">Aun no hay candidatos guardados en el Banco de Talento.</div>'
+    :list.map(function(c){
+      var cv=c.cv||{};
+      return '<div class="history-item" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
+        +'<div><b style="font-size:13.5px">'+esc(c.nombre)+'</b><div style="font-size:11px;color:var(--ink2)">'+esc(c.bancoTalentoOrigenCargo||'')+(cv.puntaje!=null?' · CV '+cv.puntaje:'')+(c.bancoTalentoFecha?' · '+esc(c.bancoTalentoFecha):'')+'</div></div>'
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+(cv.telefono?'<a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a>':'')+'<button class="lbtn red" onclick="quitarDeBancoTalento(\''+c.id+'\')">Quitar</button></div>'
+        +'</div>';
+    }).join('');
+  gid('modal-body').innerHTML='<div class="modal-section"><div class="modal-section-title">Candidatos guardados de todos los procesos ('+list.length+')</div>'+body+'</div>';
+}
+window.quitarDeBancoTalento=async function(id){
+  var c=bancoTalentoCache.find(function(x){return x.id===id;});if(!c)return;
+  c.enBancoTalento=false;
+  await guardarCandidatoGlobal(c);
+  bancoTalentoCache=bancoTalentoCache.filter(function(x){return x.id!==id;});
+  renderBancoTalento();
+};
+window.abrirBancoTalentoParaProceso=async function(){
+  if(!currentProceso)return;
+  gid('modal-name').textContent='💼 Avisar Banco de Talento — '+currentProceso.cargo;
+  gid('modal-body').innerHTML='<div style="padding:20px;text-align:center;color:var(--ink2)">Cargando...</div>';
+  gid('modal-actions').innerHTML='<button class="btn sm ghost" onclick="closeModalDirect()">Cerrar</button>';
+  gid('modal-overlay').classList.add('open');
+  var list=[];try{list=await cargarBancoTalento();}catch(e){}
+  var msg='Hola! Se abrio una nueva vacante para el cargo de '+currentProceso.cargo+' en Avila Law Consulting. Nos encantaria que participaras. Estas interesado(a)?';
+  var body=!list.length?'<div style="padding:20px;text-align:center;color:var(--ink2)">Aun no hay candidatos en el Banco de Talento.</div>'
+    :list.map(function(c){
+      var cv=c.cv||{};
+      return '<div class="history-item" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
+        +'<div><b style="font-size:13.5px">'+esc(c.nombre)+'</b><div style="font-size:11px;color:var(--ink2)">'+esc(c.bancoTalentoOrigenCargo||'')+(cv.puntaje!=null?' · CV '+cv.puntaje:'')+'</div></div>'
+        +(cv.telefono?'<a class="btn sm wa-btn" href="'+waLink(cv.telefono,msg)+'" target="_blank" rel="noopener">💬 Avisar por WhatsApp</a>':'<span style="font-size:11px;color:var(--ink2)">Sin telefono</span>')
+        +'</div>';
+    }).join('');
+  gid('modal-body').innerHTML='<div class="modal-section"><div class="modal-section-title">Candidatos del Banco de Talento ('+list.length+')</div><p style="font-size:12px;color:var(--ink2);margin-bottom:10px">Cada boton abre WhatsApp con un mensaje ya redactado sobre esta vacante.</p>'+body+'</div>';
+};
 
 function abrirModalProceso(){gid('modal-proceso').classList.add('open');}
 window.abrirModalProceso=abrirModalProceso;
@@ -722,7 +783,7 @@ async function callAI(msgs,max){
   return(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').replace(/```json|```/g,'').trim();
 }
 function f2b(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=rej;r.readAsDataURL(file);});}
-var CV_PROMPT='Eres asistente de RRHH de Avila Law Consulting. Analiza hojas de vida para el cargo actual. Responde UNICAMENTE con JSON:\n{"nombre":"...","telefono":"10 digitos o null","email":"...o null","titulo_derecho":"si|no|no_indicado","tarjeta_profesional":"si|no|no_indicado","anos_experiencia_estimados":0,"experiencia_relevante":"1-2 frases","puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases","alertas":["..."]}';
+var CV_PROMPT='Eres asistente de RRHH de Avila Law Consulting. Analiza hojas de vida para el cargo actual. Responde UNICAMENTE con JSON:\n{"nombre":"...","telefono":"10 digitos o null","email":"...o null","titulo_derecho":"si|no|no_indicado","tarjeta_profesional":"si|no|no_indicado","anos_experiencia_estimados":0,"experiencia_relevante":"1-2 frases","puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases","alertas":["..."],"potencial_banco_talento":true o false (marca true si el perfil es bueno aunque no encaje en este cargo especifico, para futuras vacantes),"potencial_banco_talento_razon":"1 frase, solo si es true"}';
 
 window.analizarCVs=async function(){
   var inp=gid('cv-files');if(!inp)return;
@@ -736,7 +797,7 @@ window.analizarCVs=async function(){
       var block=file.type==='application/pdf'?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}:{type:'image',source:{type:'base64',media_type:file.type,data:b64}};
       var raw=await callAI([{role:'user',content:[block,{type:'text',text:CV_PROMPT}]}],1000);
       var p=JSON.parse(raw);
-      var cand={id:'cv-'+Date.now()+'-'+i,stage:'cv',nombre:p.nombre||'Sin nombre',fileName:file.name,analizadoEn:nowStr(),cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null}};
+      var cand={id:'cv-'+Date.now()+'-'+i,stage:'cv',nombre:p.nombre||'Sin nombre',fileName:file.name,analizadoEn:nowStr(),cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null,potencialBanco:!!p.potencial_banco_talento,potencialBancoRazon:p.potencial_banco_talento_razon||''}};
       var idx=cands.findIndex(function(c){return c.fileName===file.name;});
       if(idx>=0)cands[idx]=cand;else cands.unshift(cand);
       await guardarCandidato(cand);
@@ -765,6 +826,9 @@ window.descartarModal=function(id){
   var razon=prompt('Razon de descalificacion:','');if(razon===null)return;if(!razon.trim()){alert('Escribe una razon.');return;}
   var c=findCand(id);if(!c)return;c.descartadoRH=true;c.descartadoRHRazon=razon.trim();c.descartadoRHFecha=nowStr();
   if(c.interview){c.interview.verdict='noapto';c.interview.verdictLabel='Descartada por RRHH';}
+  if(!c.enBancoTalento&&confirm('¿Guardar tambien este candidato en el Banco de Talento para futuras vacantes?')){
+    c.enBancoTalento=true;c.bancoTalentoFecha=nowStr();c.bancoTalentoOrigenCargo=currentProceso&&currentProceso.cargo||'';
+  }
   guardarCandidato(c).then(function(){closeModalDirect();render();});
 };
 window.reactivarCandidato=async function(id){
@@ -877,6 +941,18 @@ window.guardarNotasFinales=async function(id){
   var c=findCand(id);if(!c)return;
   c.notasFinales=(gid('notes-final')&&gid('notes-final').value)||'';
   await guardarCandidato(c);
+};
+window.guardarEnBancoTalento=async function(id){
+  var c=findCand(id);if(!c)return;
+  c.enBancoTalento=true;c.bancoTalentoFecha=nowStr();c.bancoTalentoOrigenCargo=currentProceso&&currentProceso.cargo||'';
+  await guardarCandidato(c);
+  render();openModal(id);
+};
+window.quitarDeBancoTalentoFicha=async function(id){
+  var c=findCand(id);if(!c)return;
+  c.enBancoTalento=false;
+  await guardarCandidato(c);
+  render();openModal(id);
 };
 window.editarDriveLink=function(id){driveLinkEditing=id;openModal(id);};
 window.guardarDriveLinkManual=async function(id){
@@ -1022,7 +1098,7 @@ function buildKCard(c){
   var waQuick=(c.stage==='final'&&!c.descartadoRH&&cv.telefono)?'<div class="psic-quick-acts" onclick="event.stopPropagation()"><a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a></div>':'';
   return '<div class="kb-card '+stCls+'" draggable="true" ondragstart="kbDragStart(event,\''+c.id+'\')" ondragend="kbDragEnd(event)" onclick="openModal(\''+c.id+'\')"><div class="kb-card-bar" style="height:3px;background:var(--cream)"><div style="height:100%;width:'+Math.min(cs,100)+'%;background:'+(cs>=75?'var(--green)':cs>=55?'var(--amber)':'var(--red)')+'"></div></div><div class="kb-card-top"><div class="kb-card-name">'+esc(c.nombre)+'</div>'+(cv.telefono?'<div style="font-size:10px;color:var(--ink2)">'+esc(cv.telefono)+'</div>':'')+st+'</div>'+(pills?'<div class="kb-card-scores">'+pills+'</div>':'')+drive+psicQuick+waQuick+'</div>';
 }
-function waLink(tel){var d=String(tel||'').replace(/\D/g,'');if(!d)return'#';if(d.length<=10)d='57'+d;return 'https://wa.me/'+d;}
+function waLink(tel,text){var d=String(tel||'').replace(/\D/g,'');if(!d)return'#';if(d.length<=10)d='57'+d;return 'https://wa.me/'+d+(text?'?text='+encodeURIComponent(text):'');}
 function buildPipeline(){
   var byCol={};COLS_KB.forEach(function(col){byCol[col.id]=[];});
   cands.forEach(function(c){
@@ -1177,7 +1253,11 @@ window.openModal=function(id){
   var siL={si:'Si',no:'No',no_indicado:'No indicado'};
   gid('modal-name').textContent=c.nombre;
   var body='<div class="modal-section"><div class="modal-section-title">Resumen</div><div class="history-item"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+(cv.puntaje!=null?'<span class="badge '+scoreClass(cv.puntaje)+'">CV: '+cv.puntaje+'</span>':'')+(iv.total!=null?'<span class="badge '+scoreClass(iv.total)+'">Ent.: '+iv.total+'</span>':'')+(psic.done?'<span class="badge '+(psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red')+'">Psico: '+esc(psic.recomendacion)+'</span>':'')+'</div>'+(cv.experiencia?'<p style="font-size:12.5px;color:var(--ink2)">'+esc(cv.experiencia)+'</p>':'')+'<p style="font-size:12px;margin-top:6px">Titulo: '+(siL[cv.titulo]||'?')+' | TP: '+(siL[cv.tarjeta]||'?')+'</p>'+(cv.telefono?'<p style="font-size:12px;margin-top:4px">'+esc(cv.telefono)+(cv.email?' | '+esc(cv.email):'')+'</p>':'')+((c.driveLink&&driveLinkEditing!==c.id)?'<p style="margin-top:6px"><a class="drive-badge" href="'+esc(c.driveLink)+'" target="_blank" rel="noopener">📎 Ver CV en Google Drive</a> <button class="lbtn" onclick="editarDriveLink(\''+c.id+'\')">Cambiar</button></p>':'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="text" id="drive-link-manual" placeholder="Pegar link del CV en Google Drive" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--cream)"><button class="btn sm" onclick="guardarDriveLinkManual(\''+c.id+'\')">Guardar link</button></div>')+'</div></div>';
-  body+='<div class="modal-section"><div class="modal-section-title">Hoja de Vida</div><div class="history-item">'+(cv.justificacion?'<p style="font-size:12.5px;color:var(--ink2)">'+esc(cv.justificacion)+'</p>':'')+(cv.alertas&&cv.alertas.length?'<div style="margin-top:6px">'+cv.alertas.map(function(a){return '<div style="font-size:12px;color:var(--amber)">[!] '+esc(a)+'</div>';}).join('')+'</div>':'')+'<div style="margin-top:8px"><span class="badge '+cvBadge(cv.veredicto||'')+'">'+cvLabel(cv.veredicto||'')+'</span></div></div></div>';
+  body+='<div class="modal-section"><div class="modal-section-title">Hoja de Vida</div><div class="history-item">'+(cv.justificacion?'<p style="font-size:12.5px;color:var(--ink2)">'+esc(cv.justificacion)+'</p>':'')+(cv.alertas&&cv.alertas.length?'<div style="margin-top:6px">'+cv.alertas.map(function(a){return '<div style="font-size:12px;color:var(--amber)">[!] '+esc(a)+'</div>';}).join('')+'</div>':'')+'<div style="margin-top:8px"><span class="badge '+cvBadge(cv.veredicto||'')+'">'+cvLabel(cv.veredicto||'')+'</span></div></div>'
+    +(c.enBancoTalento?'<div class="reason-block">💼 Este candidato esta guardado en el Banco de Talento'+(c.bancoTalentoOrigenCargo?' (desde: '+esc(c.bancoTalentoOrigenCargo)+')':'')+'. <button class="lbtn red" onclick="quitarDeBancoTalentoFicha(\''+c.id+'\')">Quitar</button></div>'
+      :(cv.potencialBanco?'<div class="reason-block">💡 La IA sugiere guardarlo en el Banco de Talento: '+esc(cv.potencialBancoRazon||'')+' <button class="lbtn" onclick="guardarEnBancoTalento(\''+c.id+'\')">Guardar en Banco de Talento</button></div>'
+        :'<div style="margin-top:8px"><button class="lbtn" onclick="guardarEnBancoTalento(\''+c.id+'\')">💼 Guardar en Banco de Talento</button></div>'))
+    +'</div>';
   if(iv.done){
     body+='<div class="modal-section"><div class="modal-section-title">Entrevista RRHH</div><div class="history-item"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><span style="font-family:Source Serif 4,serif;font-size:28px;font-weight:700;color:'+vColor(iv.verdict||'')+'">'+(iv.total||0)+'</span><span class="badge '+vClass(iv.verdict||'')+'">'+esc(iv.verdictLabel||'')+'</span></div>'+CATS.map(function(cat){var s=(iv.catScores&&iv.catScores[cat.id])||0;var cl=s>=75?'var(--green)':s>=55?'var(--amber)':'var(--red)';return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:12px"><span>'+cat.label+'</span><span style="font-weight:700;color:'+cl+'">'+s+'</span></div>';}).join('')+(iv.notes?'<div style="margin-top:8px;padding:8px;background:var(--cream);border-radius:6px;font-size:12px">'+esc(iv.notes)+'</div>':'')+'<div style="margin-top:12px"><details><summary style="cursor:pointer;font-weight:700;color:var(--gold);font-size:12px;margin-bottom:8px">Ver respuestas con razonamiento</summary>'+CATS.map(function(cat){return '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gold);margin-bottom:4px">'+cat.label+'</div>'+cat.qs.map(function(qid){var a=(iv.answers&&iv.answers[qid])||{};var rc=a.rating>=4?'var(--green)':a.rating>=3?'var(--amber)':'var(--red)';return '<div style="padding:7px;border-left:3px solid '+rc+';background:#f9f6f0;border-radius:0 6px 6px 0;margin-bottom:5px"><div style="font-size:11px;font-weight:600">'+esc(a.text||Q[qid].t)+'</div>'+(a.respuesta?'<div style="font-size:11px;color:var(--ink2);margin:2px 0">'+esc(a.respuesta)+'</div>':'')+(a.aiNote?'<div style="font-size:11px;color:#2a8f9e;font-style:italic">'+esc(a.aiNote)+'</div>':'')+'<div style="font-size:11px;font-weight:700;color:'+rc+'">'+(a.rating||0)+'/5</div></div>';}).join('')+'</div>';}).join('')+'</details></div></div></div>';
   }else{body+='<div class="modal-section"><div class="modal-section-title">Entrevista RRHH</div><div class="history-item" style="color:var(--ink2);font-size:13px">'+(c.scheduled&&c.scheduled.fecha?'Agendada: '+c.scheduled.fecha:'Entrevista pendiente')+'</div></div>';}
