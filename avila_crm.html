@@ -298,8 +298,9 @@ h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
 <div class="modal-bg" id="modal-config">
   <div class="modal-box" style="max-width:520px;max-height:88vh;overflow-y:auto">
     <h3>Configuración</h3>
-    <div class="cfg-note">Estas llaves quedan guardadas solo en este navegador (localStorage). Son opcionales: mientras no las llenes, esas funciones específicas quedan desactivadas pero el resto del CRM funciona normal.</div>
-    <div class="field"><label>Anthropic API Key (análisis con IA)</label><input type="password" id="cfg-anthropic" placeholder="sk-ant-..."></div>
+    <div class="cfg-note">Estas llaves quedan guardadas solo en este navegador (localStorage). Son opcionales: mientras no las llenes, esas funciones específicas quedan desactivadas pero el resto del CRM funciona normal. Si llenas la llave de Gemini (gratis) y dejas vacía la de Anthropic, la IA usará Gemini automáticamente.</div>
+    <div class="field"><label>Anthropic API Key (análisis con IA — de pago)</label><input type="password" id="cfg-anthropic" placeholder="sk-ant-..."></div>
+    <div class="field"><label>Google Gemini API Key (análisis con IA — gratis)</label><input type="password" id="cfg-gemini" placeholder="AIza..."></div>
     <div class="field"><label>Google OAuth Client ID (Google Drive)</label><input type="text" id="cfg-gclient" placeholder="xxxx.apps.googleusercontent.com"></div>
     <div class="field"><label>Carpeta de Google Drive (ID)</label><input type="text" id="cfg-gfolder" placeholder="ID de carpeta"></div>
     <div class="field"><label>EmailJS Service ID</label><input type="text" id="cfg-ejs-service" placeholder="service_xxx"></div>
@@ -336,12 +337,13 @@ var AVILA_EMAIL_DEFAULT='miguel.avila@avilalawconsulting.com';
 
 /* ══ CONFIG (llaves opcionales guardadas en localStorage) ══ */
 var CFG=(function(){
-  var d={anthropicKey:'',gClientId:'',gFolderId:DRIVE_FOLDER_DEFAULT,ejsService:'',ejsTemplate:'',ejsPublic:'',avilaEmail:AVILA_EMAIL_DEFAULT};
+  var d={anthropicKey:'',geminiKey:'',gClientId:'',gFolderId:DRIVE_FOLDER_DEFAULT,ejsService:'',ejsTemplate:'',ejsPublic:'',avilaEmail:AVILA_EMAIL_DEFAULT};
   try{var s=JSON.parse(localStorage.getItem('av_cfg')||'{}');Object.assign(d,s);}catch(e){}
   return d;
 })();
 function abrirConfig(){
   gid('cfg-anthropic').value=CFG.anthropicKey||'';
+  gid('cfg-gemini').value=CFG.geminiKey||'';
   gid('cfg-gclient').value=CFG.gClientId||'';
   gid('cfg-gfolder').value=CFG.gFolderId||DRIVE_FOLDER_DEFAULT;
   gid('cfg-ejs-service').value=CFG.ejsService||'';
@@ -355,6 +357,7 @@ function cerrarConfig(){gid('modal-config').classList.remove('open');}
 window.cerrarConfig=cerrarConfig;
 function guardarConfig(){
   CFG.anthropicKey=gid('cfg-anthropic').value.trim();
+  CFG.geminiKey=gid('cfg-gemini').value.trim();
   CFG.gClientId=gid('cfg-gclient').value.trim();
   CFG.gFolderId=gid('cfg-gfolder').value.trim()||DRIVE_FOLDER_DEFAULT;
   CFG.ejsService=gid('cfg-ejs-service').value.trim();
@@ -672,11 +675,32 @@ function getSeedCands(){
 }
 
 /* ══ CV ANALYSIS ══ */
+function anthropicBlocksToGeminiParts(content){
+  if(typeof content==='string')return[{text:content}];
+  return content.map(function(b){
+    if(b.type==='text')return{text:b.text};
+    if(b.type==='document'||b.type==='image')return{inline_data:{mime_type:b.source.media_type,data:b.source.data}};
+    return{text:''};
+  });
+}
+async function callGemini(msgs,max){
+  var contents=msgs.map(function(m){return{role:m.role==='assistant'?'model':'user',parts:anthropicBlocksToGeminiParts(m.content)};});
+  var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key='+encodeURIComponent(CFG.geminiKey),{
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({contents:contents,generationConfig:{maxOutputTokens:max||1500}})
+  });
+  if(!r.ok){var errTxt='';try{errTxt=(await r.json()).error.message;}catch(e){}throw new Error('Gemini error '+r.status+(errTxt?': '+errTxt:''));}
+  var d=await r.json();
+  var cand=(d.candidates||[])[0];
+  if(!cand)throw new Error('Gemini no devolvio respuesta (posible bloqueo de contenido).');
+  return(cand.content&&cand.content.parts||[]).map(function(p){return p.text||'';}).join('').replace(/```json|```/g,'').trim();
+}
 async function callAI(msgs,max){
+  if(!CFG.anthropicKey&&CFG.geminiKey)return callGemini(msgs,max);
   var headers={'Content-Type':'application/json'};
   if(CFG.anthropicKey){headers['x-api-key']=CFG.anthropicKey;headers['anthropic-version']='2023-06-01';headers['anthropic-dangerous-direct-browser-access']='true';}
   var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:headers,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:max||1500,messages:msgs})});
-  if(!r.ok)throw new Error('Error '+r.status+(!CFG.anthropicKey?' (configura tu Anthropic API Key en Configuración)':''));
+  if(!r.ok)throw new Error('Error '+r.status+(!CFG.anthropicKey?' (configura tu Anthropic API Key o Gemini API Key en Configuración)':''));
   var d=await r.json();
   return(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').replace(/```json|```/g,'').trim();
 }
