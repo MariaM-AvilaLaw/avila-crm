@@ -709,23 +709,40 @@ window.quitarDeBancoTalento=async function(id){
   bancoTalentoCache=bancoTalentoCache.filter(function(x){return x.id!==id;});
   renderBancoTalento();
 };
+var bancoTalentoParaProcesoCache=[];
 window.abrirBancoTalentoParaProceso=async function(){
   if(!currentProceso)return;
   gid('modal-name').textContent='💼 Avisar Banco de Talento — '+currentProceso.cargo;
   gid('modal-body').innerHTML='<div style="padding:20px;text-align:center;color:var(--ink2)">Cargando...</div>';
   gid('modal-actions').innerHTML='<button class="btn sm ghost" onclick="closeModalDirect()">Cerrar</button>';
   gid('modal-overlay').classList.add('open');
-  var list=[];try{list=await cargarBancoTalento();}catch(e){}
+  try{bancoTalentoParaProcesoCache=await cargarBancoTalento();}catch(e){bancoTalentoParaProcesoCache=[];}
+  renderBancoTalentoParaProceso();
+};
+function renderBancoTalentoParaProceso(){
+  var list=bancoTalentoParaProcesoCache;
   var msg='Hola! Se abrio una nueva vacante para el cargo de '+currentProceso.cargo+' en Avila Law Consulting. Nos encantaria que participaras. Estas interesado(a)?';
   var body=!list.length?'<div style="padding:20px;text-align:center;color:var(--ink2)">Aun no hay candidatos en el Banco de Talento.</div>'
     :list.map(function(c){
       var cv=c.cv||{};
+      var yaAgregado=cands.some(function(x){return x.origenBancoId===c.id;});
       return '<div class="history-item" style="display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap">'
         +'<div><b style="font-size:13.5px">'+esc(c.nombre)+'</b><div style="font-size:11px;color:var(--ink2)">'+esc(c.bancoTalentoOrigenCargo||'')+(cv.puntaje!=null?' · CV '+cv.puntaje:'')+'</div></div>'
-        +(cv.telefono?'<a class="btn sm wa-btn" href="'+waLink(cv.telefono,msg)+'" target="_blank" rel="noopener">💬 Avisar por WhatsApp</a>':'<span style="font-size:11px;color:var(--ink2)">Sin telefono</span>')
-        +'</div>';
+        +'<div style="display:flex;gap:6px;flex-wrap:wrap">'+(cv.telefono?'<a class="btn sm wa-btn" href="'+waLink(cv.telefono,msg)+'" target="_blank" rel="noopener">💬 Avisar por WhatsApp</a>':'<span style="font-size:11px;color:var(--ink2)">Sin telefono</span>')
+        +(yaAgregado?'<span class="badge grey">Ya agregado a este proceso</span>':'<button class="btn sm green" onclick="agregarDesdeBancoAProceso(\''+c.id+'\')">➕ Agregar a este proceso</button>')
+        +'</div></div>';
     }).join('');
-  gid('modal-body').innerHTML='<div class="modal-section"><div class="modal-section-title">Candidatos del Banco de Talento ('+list.length+')</div><p style="font-size:12px;color:var(--ink2);margin-bottom:10px">Cada boton abre WhatsApp con un mensaje ya redactado sobre esta vacante.</p>'+body+'</div>';
+  gid('modal-body').innerHTML='<div class="modal-section"><div class="modal-section-title">Candidatos del Banco de Talento ('+list.length+')</div><p style="font-size:12px;color:var(--ink2);margin-bottom:10px">Cada boton abre WhatsApp con un mensaje ya redactado sobre esta vacante. Si aceptan participar, agregalos directo a este proceso.</p>'+body+'</div>';
+}
+window.agregarDesdeBancoAProceso=async function(id){
+  if(!currentProceso)return;
+  var c=bancoTalentoParaProcesoCache.find(function(x){return x.id===id;});if(!c)return;
+  if(cands.some(function(x){return x.origenBancoId===c.id;})){alert('Ya fue agregado a este proceso.');return;}
+  var nuevo={id:'bt-'+Date.now(),stage:'cv',nombre:c.nombre,fileName:c.fileName||'',analizadoEn:nowStr(),driveLink:c.driveLink||'',driveFileId:c.driveFileId||'',origenBancoId:c.id,notas:'Reincorporado desde el Banco de Talento ('+(c.bancoTalentoOrigenCargo||'proceso anterior')+').',cv:c.cv||{}};
+  cands.unshift(nuevo);
+  await guardarCandidato(nuevo);
+  renderBancoTalentoParaProceso();
+  render();
 };
 
 function abrirModalProceso(){gid('modal-proceso').classList.add('open');}
