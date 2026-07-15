@@ -408,6 +408,7 @@ var cands=[];
 var tab='pipeline';
 var formId=null;
 var psicFiles={};
+var psicLinks={};
 var modalId=null;
 var driveLinkEditing=null;
 
@@ -753,7 +754,6 @@ window.citarCandidato=async function(id){
 };
 window.enviarAPsic=async function(id){var c=findCand(id);if(!c)return;c.stage='psic';await guardarCandidato(c);closeModalDirect();render();};
 window.enviarAFinal=async function(id){var c=findCand(id);if(!c)return;c.stage='final';await guardarCandidato(c);closeModalDirect();render();};
-window.quitarDeFinal=async function(id){var c=findCand(id);if(!c)return;c.stage='psic';await guardarCandidato(c);closeModalDirect();render();};
 window.eliminarCand=async function(id){
   if(!confirm('Eliminar candidato?'))return;
   var c=findCand(id);if(!c)return;
@@ -775,7 +775,7 @@ window.reactivarCandidato=async function(id){
 
 /* ══ ENTREVISTA FORM ══ */
 window.openInterviewForm=function(id){formId=id;tab='form-interview';render();};
-window.openPsicForm=function(id){psicFiles={};formId=id;tab='form-psic';render();};
+window.openPsicForm=function(id){psicFiles={};psicLinks={};formId=id;tab='form-psic';render();};
 window.goBackFromForm=function(){tab='pipeline';formId=null;render();};
 window.goTab=function(t){tab=t;formId=null;render();};
 
@@ -831,21 +831,39 @@ function buildPsicForm(){
   var psic=c.psic||{},iv=c.interview||{};
   var results='';
   if(psic.done&&psic.tests){var rc={Avanzar:'g',Revisar:'a','No avanzar':'r'}[psic.recomendacion]||'a';results='<div class="card"><h4 style="font-size:15px;margin-bottom:12px">Resultado del analisis</h4><div style="display:flex;gap:10px;align-items:center;margin-bottom:8px"><span class="badge '+rc+'">'+esc(psic.recomendacion)+'</span><span style="font-size:13px;font-weight:600">'+esc(psic.conclusion)+'</span></div><p style="font-size:13px;color:var(--ink2)">'+esc(psic.justificacion)+'</p>'+(psic.tests||[]).map(function(t){var tc=t.adecuacion==='Alta'?'g':t.adecuacion==='Media'?'a':'r';return '<div style="margin-top:10px;padding:10px;border:1px solid var(--line);border-radius:8px"><div style="display:flex;gap:8px;margin-bottom:4px"><b>'+esc(t.nombre)+'</b><span class="badge '+tc+'">'+esc(t.adecuacion)+'</span></div><p style="font-size:12px;color:var(--ink2)">'+esc(t.interpretacion)+'</p>'+(t.fortalezas&&t.fortalezas.length?'<div style="font-size:12px;color:var(--green);margin-top:4px">OK: '+t.fortalezas.map(esc).join(' | ')+'</div>':'')+(t.riesgos&&t.riesgos.length?'<div style="font-size:12px;color:var(--red);margin-top:2px">Riesgos: '+t.riesgos.map(esc).join(' | ')+'</div>':'')+'</div>';}).join('')+'</div>';}
-  var uploads=['ZAVIC','GORDON','BARSIT','HONESTIVALUES'].map(function(t){return '<div class="psic-row" style="display:flex;align-items:center;gap:10px;padding:10px;background:var(--cream);border-radius:7px;margin-bottom:8px"><b style="min-width:140px;font-size:13.5px">'+t+'</b><input type="file" accept=".pdf,.png,.jpg,.jpeg" onchange="onPsicFile(\''+t+'\',this)"></div>';}).join('');
-  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button class="btn ghost sm" onclick="goBackFromForm()">← Volver</button></div><div class="card"><h2>Pruebas Psicometricas</h2><p style="font-size:13px;color:var(--ink2);margin-top:4px">'+esc(c.nombre)+' - '+nowStr()+'</p><div style="margin-top:8px;font-size:13px">CV: '+(c.cv&&c.cv.puntaje||0)+'/100 | Entrevista: '+(iv.total||0)+'/100 | '+esc(iv.verdictLabel||'')+'</div></div><div class="card"><h4 style="font-size:15px;margin-bottom:12px">Subir resultados de pruebas</h4>'+uploads+'<div style="display:flex;gap:10px;margin-top:14px"><button class="btn gold" id="psic-btn" onclick="analizarPruebas(\''+c.id+'\')">Analizar con IA</button></div><div id="psic-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>'+results;
+  var uploads=['ZAVIC','GORDON','BARSIT','HONESTIVALUES'].map(function(t){
+    var linkInput=(CFG.gClientId&&drive.token)?'<input type="text" id="psic-link-'+t+'" placeholder="o pegar link de Google Drive" style="margin-top:6px;width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--cream)" onchange="onPsicLink(\''+t+'\',this)">':'';
+    var savedLink=(c.psic&&c.psic.links&&c.psic.links[t])?'<div style="margin-top:4px"><a class="drive-badge" href="'+esc(c.psic.links[t])+'" target="_blank" rel="noopener">📎 Link guardado</a></div>':'';
+    return '<div class="psic-row" style="padding:10px;background:var(--cream);border-radius:7px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px"><b style="min-width:140px;font-size:13.5px">'+t+'</b><input type="file" accept=".pdf,.png,.jpg,.jpeg" onchange="onPsicFile(\''+t+'\',this)"></div>'+linkInput+savedLink+'</div>';
+  }).join('');
+  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button class="btn ghost sm" onclick="goBackFromForm()">← Volver</button></div><div class="card"><h2>Pruebas Psicometricas</h2><p style="font-size:13px;color:var(--ink2);margin-top:4px">'+esc(c.nombre)+' - '+nowStr()+'</p><div style="margin-top:8px;font-size:13px">CV: '+(c.cv&&c.cv.puntaje||0)+'/100 | Entrevista: '+(iv.total||0)+'/100 | '+esc(iv.verdictLabel||'')+'</div></div><div class="card"><h4 style="font-size:15px;margin-bottom:12px">Subir resultados de pruebas (archivo o link de Drive)</h4>'+uploads+'<div style="display:flex;gap:10px;margin-top:14px"><button class="btn gold" id="psic-btn" onclick="analizarPruebas(\''+c.id+'\')">Analizar con IA</button></div><div id="psic-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>'+results;
 }
 window.onPsicFile=function(t,inp){if(inp.files&&inp.files[0])psicFiles[t]=inp.files[0];};
+window.onPsicLink=function(t,inp){var v=inp.value.trim();if(v)psicLinks[t]=v;else delete psicLinks[t];};
 window.analizarPruebas=async function(id){
-  var c=findCand(id);if(!c)return;if(!Object.keys(psicFiles).length){alert('Sube al menos un resultado.');return;}
+  var c=findCand(id);if(!c)return;
+  if(!Object.keys(psicFiles).length&&!Object.keys(psicLinks).length){alert('Sube al menos un resultado o pega un link de Drive.');return;}
   var btn=gid('psic-btn'),ld=gid('psic-ld');if(btn)btn.disabled=true;if(ld)ld.textContent='Analizando...';
   var blocks=[];
   for(var t in psicFiles){try{var f=psicFiles[t],b=await f2b(f);blocks.push(f.type==='application/pdf'?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b}}:{type:'image',source:{type:'base64',media_type:f.type,data:b}});blocks.push({type:'text',text:'[Prueba: '+t+']'});}catch(e){}}
+  var links={};
+  for(var t2 in psicLinks){
+    try{
+      var fileId=driveExtractFileId(psicLinks[t2]);
+      if(!fileId||!drive.token)continue;
+      var b2=await driveFetchFileBase64(fileId);
+      blocks.push({type:'document',source:{type:'base64',media_type:'application/pdf',data:b2}});
+      blocks.push({type:'text',text:'[Prueba: '+t2+']'});
+      links[t2]=psicLinks[t2];
+    }catch(e){}
+  }
+  if(!blocks.length){if(btn)btn.disabled=false;if(ld)ld.textContent='';alert('No se pudo leer ningun archivo o link.');return;}
   blocks.push({type:'text',text:'Eres psicologo organizacional. Evaluas resultados psicometricos de '+c.nombre+' para el cargo en Avila Law Consulting. Responde UNICAMENTE con JSON:\n{"tests":[{"nombre":"...","interpretacion":"...","fortalezas":["..."],"riesgos":["..."],"adecuacion":"Alta|Media|Baja"}],"conclusion":"...","recomendacion":"Avanzar|Revisar|No avanzar","justificacion":"..."}'});
   try{
     var raw=await callAI([{role:'user',content:blocks}],2000);
     var p=JSON.parse(raw);
-    c.psic={done:true,analizadoEn:nowStr(),tests:p.tests||[],conclusion:p.conclusion||'',recomendacion:p.recomendacion||'Revisar',justificacion:p.justificacion||''};
-    await guardarCandidato(c);psicFiles={};tab='pipeline';formId=null;render();
+    c.psic={done:true,analizadoEn:nowStr(),tests:p.tests||[],conclusion:p.conclusion||'',recomendacion:p.recomendacion||'Revisar',justificacion:p.justificacion||'',links:Object.assign({},(c.psic&&c.psic.links)||{},links)};
+    await guardarCandidato(c);psicFiles={};psicLinks={};tab='pipeline';formId=null;render();
   }catch(e){if(btn){btn.disabled=false;btn.textContent='Analizar con IA';}if(ld)ld.textContent='';alert('Error: '+e.message);}
 };
 
@@ -1104,7 +1122,38 @@ function buildGestionTab(){
     return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)"><span style="font-size:16px;min-width:26px">'+medal+'</span><span class="rank-item-name" style="flex:1;font-size:13px;font-weight:700" onclick="mostrarExplicacionRanking(\''+c.id+'\')">'+esc(c.nombre)+'</span><span>'+stIcon+'</span><span style="font-size:11px;color:var(--ink2)">CV:'+(cv.puntaje||0)+(iv.total!=null?' Ent:'+iv.total:'')+'</span><span style="font-family:Source Serif 4,serif;font-size:17px;font-weight:700;color:'+csCl+';min-width:32px;text-align:right">'+cs+'</span></div>';
   }).join(''):'<div style="padding:30px;text-align:center;color:var(--ink2);font-size:13px">Aun no hay candidatos en entrevista o etapas posteriores.</div>';
   var rankBox='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px">Ranking General</h3><span style="font-size:11px;color:var(--ink2)">CV 20% · Ent. 50% · Psico 30%</span></div>'+rows+'</div>';
-  return kpis+rankBox;
+  return kpis+buildRadarChart(ranked)+rankBox;
+}
+var RADAR_COLORS=['#b8924a','#5a3fbf','#2a8f9e','#2a7d44','#b5453f'];
+function buildRadarChart(ranked){
+  var withScores=ranked.filter(function(c){return c.interview&&c.interview.done&&c.interview.catScores;}).slice(0,5);
+  if(!withScores.length)return'';
+  var W=340,H=340,cx=170,cy=170,R=112,n=CATS.length;
+  function angleFor(i){return -Math.PI/2+i*(2*Math.PI/n);}
+  var grid='';
+  [0.25,0.5,0.75,1].forEach(function(f){
+    var pts=CATS.map(function(cat,i){var a=angleFor(i);return(cx+R*f*Math.cos(a)).toFixed(1)+','+(cy+R*f*Math.sin(a)).toFixed(1);}).join(' ');
+    grid+='<polygon points="'+pts+'" fill="none" stroke="#e4ddcd" stroke-width="1"/>';
+  });
+  var axisLines='',axisLabels='';
+  CATS.forEach(function(cat,i){
+    var a=angleFor(i);
+    var x=cx+R*Math.cos(a),y=cy+R*Math.sin(a);
+    axisLines+='<line x1="'+cx+'" y1="'+cy+'" x2="'+x.toFixed(1)+'" y2="'+y.toFixed(1)+'" stroke="#e4ddcd" stroke-width="1"/>';
+    var lx=cx+(R+30)*Math.cos(a),ly=cy+(R+30)*Math.sin(a);
+    var anchor=Math.cos(a)>0.3?'start':Math.cos(a)<-0.3?'end':'middle';
+    var words=cat.label.split(' ');
+    axisLabels+='<text x="'+lx.toFixed(1)+'" y="'+ly.toFixed(1)+'" font-size="9.5" fill="#3a3f47" text-anchor="'+anchor+'" font-family="Inter,sans-serif">'+esc(words.join(' '))+'</text>';
+  });
+  var polys='',legend='';
+  withScores.forEach(function(c,idx){
+    var color=RADAR_COLORS[idx%RADAR_COLORS.length];
+    var pts=CATS.map(function(cat,i){var a=angleFor(i);var val=Math.min((c.interview.catScores[cat.id]||0)/100,1);return(cx+R*val*Math.cos(a)).toFixed(1)+','+(cy+R*val*Math.sin(a)).toFixed(1);}).join(' ');
+    polys+='<polygon points="'+pts+'" fill="'+color+'" fill-opacity="0.13" stroke="'+color+'" stroke-width="2"/>';
+    legend+='<div style="display:flex;align-items:center;gap:6px;font-size:11.5px;margin-bottom:5px"><span style="width:10px;height:10px;border-radius:50%;background:'+color+';display:inline-block;flex-shrink:0"></span>'+esc(c.nombre)+'</div>';
+  });
+  var svg='<svg viewBox="0 0 '+W+' '+H+'" style="width:100%;max-width:340px;height:auto">'+grid+axisLines+polys+axisLabels+'</svg>';
+  return '<div class="card"><h3 style="font-size:15px;margin-bottom:12px">Mapa de habilidades evaluadas</h3><p style="font-size:12px;color:var(--ink2);margin-bottom:10px">Puntaje por categoria de entrevista (0-100) de los candidatos con entrevista realizada.</p><div style="display:flex;gap:18px;flex-wrap:wrap;align-items:center"><div style="flex:1;min-width:220px">'+svg+'</div><div>'+legend+'</div></div></div>';
 }
 window.mostrarExplicacionRanking=function(id){
   var c=findCand(id);if(!c)return;
@@ -1159,7 +1208,6 @@ window.openModal=function(id){
     if(c.stage==='cv')acts+='<button class="btn sm green" onclick="citarCandidato(\''+c.id+'\')">Citar</button>';
     if(c.stage==='interview'){acts+='<button class="btn sm" onclick="closeModalDirect();openInterviewForm(\''+c.id+'\')">'+( iv.done?'Ver entrevista':'Realizar entrevista')+'</button>';if(iv.done&&(iv.verdict==='apto'||iv.verdict==='reservas'))acts+='<button class="btn sm green" onclick="enviarAPsic(\''+c.id+'\')">Pruebas Psico</button>';}
     if(c.stage==='psic'){acts+='<button class="btn sm" onclick="closeModalDirect();openPsicForm(\''+c.id+'\')">'+( psic.done?'Ver pruebas':'Cargar pruebas')+'</button>';if(psic.done&&psic.recomendacion==='Avanzar')acts+='<button class="btn sm green" onclick="enviarAFinal(\''+c.id+'\')">Informe Final</button>';}
-    if(c.stage==='final'){acts+='<button class="btn sm ghost" onclick="quitarDeFinal(\''+c.id+'\')">Quitar de final</button>';}
     if(c.stage!=='cv')acts+='<button class="btn sm" style="background:var(--red)" onclick="descartarModal(\''+c.id+'\')">Descalificar</button>';
   }
   if(cv.telefono)acts+='<a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a>';
