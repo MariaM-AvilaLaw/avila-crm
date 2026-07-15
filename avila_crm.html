@@ -539,38 +539,50 @@ async function driveListFolderChildren(folderId){
 async function driveFetchFiles(){
   if(!drive.token)return[];
   var rootId=CFG.gFolderId||DRIVE_FOLDER_DEFAULT;
-  var pdfs=[],queue=[rootId],seen={};
+  var pdfs=[],queue=[{id:rootId,folderName:''}],seen={};
   while(queue.length){
-    var folderId=queue.shift();
-    if(seen[folderId])continue;seen[folderId]=true;
-    var children=await driveListFolderChildren(folderId);
+    var cur=queue.shift();
+    if(seen[cur.id])continue;seen[cur.id]=true;
+    var children=await driveListFolderChildren(cur.id);
     children.forEach(function(f){
-      if(f.mimeType==='application/vnd.google-apps.folder')queue.push(f.id);
-      else if(f.mimeType==='application/pdf')pdfs.push(f);
+      if(f.mimeType==='application/vnd.google-apps.folder')queue.push({id:f.id,folderName:f.name});
+      else if(f.mimeType==='application/pdf'){f.folderName=cur.folderName;pdfs.push(f);}
     });
   }
   return pdfs;
+}
+function driveNameMatches(nameTokens,text){
+  var norm=driveNorm(text);
+  var hits=nameTokens.filter(function(t){return norm.indexOf(t)>=0;}).length;
+  return nameTokens.length&&hits>=Math.min(2,nameTokens.length);
 }
 async function driveSyncAll(){
   if(!drive.token||!currentProceso)return;
   try{
     drive.files=await driveFetchFiles();
-    var changed=false;
+    var anyChanged=false;
     cands.forEach(function(c){
-      if(c.driveLink)return;
-      var target=driveNorm(c.fileName||c.nombre);
+      var candChanged=false;
       var nameTokens=driveNorm(c.nombre).split(' ').filter(function(t){return t.length>2;});
-      var match=drive.files.find(function(f){
-        var fn=driveNorm(f.name);
-        if(c.fileName&&fn===driveNorm(c.fileName))return true;
-        var hits=nameTokens.filter(function(t){return fn.indexOf(t)>=0;}).length;
-        return nameTokens.length&&hits>=Math.min(2,nameTokens.length);
-      });
-      if(match){c.driveLink=match.webViewLink;c.driveFileId=match.id;changed=true;guardarCandidato(c);}
+      if(!c.driveLink){
+        var match=drive.files.find(function(f){
+          if(c.fileName&&driveNorm(f.name)===driveNorm(c.fileName))return true;
+          return driveNameMatches(nameTokens,f.name);
+        });
+        if(match){c.driveLink=match.webViewLink;c.driveFileId=match.id;candChanged=true;}
+      }
+      if(!(c.psic&&c.psic.links&&c.psic.links.KOSTICK)){
+        var psicMatch=drive.files.find(function(f){
+          return (f.folderName&&driveNameMatches(nameTokens,f.folderName))||(driveNormHasKostick(f.name)&&driveNameMatches(nameTokens,f.name));
+        });
+        if(psicMatch){c.psic=Object.assign({},c.psic,{links:Object.assign({},(c.psic&&c.psic.links)||{},{KOSTICK:psicMatch.webViewLink})});candChanged=true;}
+      }
+      if(candChanged){guardarCandidato(c);anyChanged=true;}
     });
-    if(changed)render();
+    if(anyChanged)render();
   }catch(e){console.warn('Drive sync error',e);}
 }
+function driveNormHasKostick(name){return driveNorm(name).indexOf('kostick')>=0;}
 async function driveFetchFileBase64(fileId){
   var r=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?alt=media',{headers:{'Authorization':'Bearer '+drive.token}});
   if(!r.ok)throw new Error('Drive download error '+r.status);
