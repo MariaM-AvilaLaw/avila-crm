@@ -409,6 +409,7 @@ var tab='pipeline';
 var formId=null;
 var psicFiles={};
 var modalId=null;
+var driveLinkEditing=null;
 
 /* ══ UTILS ══ */
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
@@ -845,6 +846,18 @@ window.guardarNotasFinales=async function(id){
   c.notasFinales=(gid('notes-final')&&gid('notes-final').value)||'';
   await guardarCandidato(c);
 };
+window.editarDriveLink=function(id){driveLinkEditing=id;openModal(id);};
+window.guardarDriveLinkManual=async function(id){
+  var c=findCand(id);if(!c)return;
+  var val=(gid('drive-link-manual')&&gid('drive-link-manual').value.trim())||'';
+  if(!val){alert('Pega un link de Google Drive.');return;}
+  var fileId=driveExtractFileId(val);
+  c.driveLink=val;
+  if(fileId)c.driveFileId=fileId;
+  driveLinkEditing=null;
+  await guardarCandidato(c);
+  render();openModal(id);
+};
 window.reevaluarConIA=async function(id){
   var c=findCand(id);if(!c)return;
   var notas=(gid('notes-extra')&&gid('notes-extra').value)||'';
@@ -1023,12 +1036,32 @@ window.kbDrop=async function(e,colId){
 function buildDriveSection(){
   if(!CFG.gClientId)return '<div class="tip">Conecta Google Drive desde Configuración (⚙) para leer hojas de vida directamente de la carpeta RRHH, sin subirlas.</div>';
   if(!drive.token)return '<div class="tip">Google Drive no está conectado todavía. <button class="lbtn" onclick="driveConnect()">Conectar ahora</button></div>';
+  var linkBox='<div class="card"><h4 style="font-size:14px;margin-bottom:10px">Analizar un CV pegando su link de Google Drive</h4><div class="field"><label>Link de Google Drive del CV</label><input type="text" id="drive-link-input" placeholder="https://drive.google.com/file/d/..."></div><button class="btn sm gold" id="drive-link-btn" onclick="analizarDesdeLinkDrive()">Analizar desde el link</button><div id="drive-link-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>';
   var unmatched=driveListUnmatched();
-  if(!unmatched.length)return '<div class="tip">Google Drive conectado. No hay PDFs nuevos sin emparejar en la carpeta RRHH.</div>';
-  return '<div class="card"><h4 style="font-size:14px;margin-bottom:10px">PDFs en Drive sin candidato (analizar directo, sin subir)</h4>'+unmatched.map(function(f){
+  var listBox=!unmatched.length?'<div class="tip">Google Drive conectado. No hay PDFs nuevos sin emparejar en la carpeta RRHH.</div>':'<div class="card"><h4 style="font-size:14px;margin-bottom:10px">PDFs en Drive sin candidato (analizar directo, sin subir)</h4>'+unmatched.map(function(f){
     return '<div style="display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--line);font-size:13px"><span>'+esc(f.name)+'</span><button class="btn sm gold" id="drive-an-'+f.id+'" onclick="analizarDesdeDrive(\''+f.id+'\',\''+esc(f.name).replace(/'/g,"\\'")+'\')">Analizar</button></div>';
   }).join('')+'</div>';
+  return linkBox+listBox;
 }
+function driveExtractFileId(url){
+  var m=String(url||'').match(/\/d\/([a-zA-Z0-9_-]{10,})/)||String(url||'').match(/[?&]id=([a-zA-Z0-9_-]{10,})/);
+  return m?m[1]:null;
+}
+window.analizarDesdeLinkDrive=async function(){
+  var input=gid('drive-link-input');var url=input&&input.value.trim();
+  if(!url){alert('Pega el link del CV de Google Drive.');return;}
+  var fileId=driveExtractFileId(url);
+  if(!fileId){alert('No se pudo reconocer el link. Debe verse como https://drive.google.com/file/d/ALGO/view');return;}
+  if(!drive.token){alert('Conecta Google Drive primero.');return;}
+  var btn=gid('drive-link-btn'),ld=gid('drive-link-ld');if(btn)btn.disabled=true;if(ld)ld.textContent='Analizando...';
+  try{
+    var meta=await fetch('https://www.googleapis.com/drive/v3/files/'+fileId+'?fields=name',{headers:{'Authorization':'Bearer '+drive.token}});
+    var name=meta.ok?(await meta.json()).name:'CV desde link';
+    await analizarDesdeDrive(fileId,name);
+    if(input)input.value='';
+  }catch(e){alert('Error: '+e.message);}
+  if(btn)btn.disabled=false;if(ld)ld.textContent='';
+};
 function buildCvTab(){
   var cvs=cands.slice().sort(function(a,b){return(b.cv&&b.cv.puntaje||0)-(a.cv&&a.cv.puntaje||0);});
   var cards='';
@@ -1080,7 +1113,7 @@ window.openModal=function(id){
   var cv=c.cv||{},iv=c.interview||{},psic=c.psic||{};
   var siL={si:'Si',no:'No',no_indicado:'No indicado'};
   gid('modal-name').textContent=c.nombre;
-  var body='<div class="modal-section"><div class="modal-section-title">Resumen</div><div class="history-item"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+(cv.puntaje!=null?'<span class="badge '+scoreClass(cv.puntaje)+'">CV: '+cv.puntaje+'</span>':'')+(iv.total!=null?'<span class="badge '+scoreClass(iv.total)+'">Ent.: '+iv.total+'</span>':'')+(psic.done?'<span class="badge '+(psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red')+'">Psico: '+esc(psic.recomendacion)+'</span>':'')+'</div>'+(cv.experiencia?'<p style="font-size:12.5px;color:var(--ink2)">'+esc(cv.experiencia)+'</p>':'')+'<p style="font-size:12px;margin-top:6px">Titulo: '+(siL[cv.titulo]||'?')+' | TP: '+(siL[cv.tarjeta]||'?')+'</p>'+(cv.telefono?'<p style="font-size:12px;margin-top:4px">'+esc(cv.telefono)+(cv.email?' | '+esc(cv.email):'')+'</p>':'')+(c.driveLink?'<p style="margin-top:6px"><a class="drive-badge" href="'+esc(c.driveLink)+'" target="_blank" rel="noopener">📎 Ver CV en Google Drive</a></p>':'')+'</div></div>';
+  var body='<div class="modal-section"><div class="modal-section-title">Resumen</div><div class="history-item"><div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px">'+(cv.puntaje!=null?'<span class="badge '+scoreClass(cv.puntaje)+'">CV: '+cv.puntaje+'</span>':'')+(iv.total!=null?'<span class="badge '+scoreClass(iv.total)+'">Ent.: '+iv.total+'</span>':'')+(psic.done?'<span class="badge '+(psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red')+'">Psico: '+esc(psic.recomendacion)+'</span>':'')+'</div>'+(cv.experiencia?'<p style="font-size:12.5px;color:var(--ink2)">'+esc(cv.experiencia)+'</p>':'')+'<p style="font-size:12px;margin-top:6px">Titulo: '+(siL[cv.titulo]||'?')+' | TP: '+(siL[cv.tarjeta]||'?')+'</p>'+(cv.telefono?'<p style="font-size:12px;margin-top:4px">'+esc(cv.telefono)+(cv.email?' | '+esc(cv.email):'')+'</p>':'')+((c.driveLink&&driveLinkEditing!==c.id)?'<p style="margin-top:6px"><a class="drive-badge" href="'+esc(c.driveLink)+'" target="_blank" rel="noopener">📎 Ver CV en Google Drive</a> <button class="lbtn" onclick="editarDriveLink(\''+c.id+'\')">Cambiar</button></p>':'<div style="margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="text" id="drive-link-manual" placeholder="Pegar link del CV en Google Drive" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--cream)"><button class="btn sm" onclick="guardarDriveLinkManual(\''+c.id+'\')">Guardar link</button></div>')+'</div></div>';
   body+='<div class="modal-section"><div class="modal-section-title">Hoja de Vida</div><div class="history-item">'+(cv.justificacion?'<p style="font-size:12.5px;color:var(--ink2)">'+esc(cv.justificacion)+'</p>':'')+(cv.alertas&&cv.alertas.length?'<div style="margin-top:6px">'+cv.alertas.map(function(a){return '<div style="font-size:12px;color:var(--amber)">[!] '+esc(a)+'</div>';}).join('')+'</div>':'')+'<div style="margin-top:8px"><span class="badge '+cvBadge(cv.veredicto||'')+'">'+cvLabel(cv.veredicto||'')+'</span></div></div></div>';
   if(iv.done){
     body+='<div class="modal-section"><div class="modal-section-title">Entrevista RRHH</div><div class="history-item"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><span style="font-family:Source Serif 4,serif;font-size:28px;font-weight:700;color:'+vColor(iv.verdict||'')+'">'+(iv.total||0)+'</span><span class="badge '+vClass(iv.verdict||'')+'">'+esc(iv.verdictLabel||'')+'</span></div>'+CATS.map(function(cat){var s=(iv.catScores&&iv.catScores[cat.id])||0;var cl=s>=75?'var(--green)':s>=55?'var(--amber)':'var(--red)';return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:12px"><span>'+cat.label+'</span><span style="font-weight:700;color:'+cl+'">'+s+'</span></div>';}).join('')+(iv.notes?'<div style="margin-top:8px;padding:8px;background:var(--cream);border-radius:6px;font-size:12px">'+esc(iv.notes)+'</div>':'')+'<div style="margin-top:12px"><details><summary style="cursor:pointer;font-weight:700;color:var(--gold);font-size:12px;margin-bottom:8px">Ver respuestas con razonamiento</summary>'+CATS.map(function(cat){return '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gold);margin-bottom:4px">'+cat.label+'</div>'+cat.qs.map(function(qid){var a=(iv.answers&&iv.answers[qid])||{};var rc=a.rating>=4?'var(--green)':a.rating>=3?'var(--amber)':'var(--red)';return '<div style="padding:7px;border-left:3px solid '+rc+';background:#f9f6f0;border-radius:0 6px 6px 0;margin-bottom:5px"><div style="font-size:11px;font-weight:600">'+esc(a.text||Q[qid].t)+'</div>'+(a.respuesta?'<div style="font-size:11px;color:var(--ink2);margin:2px 0">'+esc(a.respuesta)+'</div>':'')+(a.aiNote?'<div style="font-size:11px;color:#2a8f9e;font-style:italic">'+esc(a.aiNote)+'</div>':'')+'<div style="font-size:11px;font-weight:700;color:'+rc+'">'+(a.rating||0)+'/5</div></div>';}).join('')+'</div>';}).join('')+'</details></div></div></div>';
