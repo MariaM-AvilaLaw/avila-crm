@@ -1187,16 +1187,17 @@ function initEmailJS(){
 window.notificarAvila=async function(id){
   var c=findCand(id);if(!c)return;
   var cv=c.cv||{};
+  var destino=CFG.avilaEmail||AVILA_EMAIL_DEFAULT;
   var asunto='Candidato para revision: '+c.nombre;
-  var cuerpo='Candidato: '+c.nombre+'\nTelefono: '+(cv.telefono||'No indicado')+'\nEmail: '+(cv.email||'No indicado')+'\nPuntaje CV: '+(cv.puntaje||'N/A')+'\nPuntaje compuesto: '+composite(c)+'\nJustificacion: '+(cv.justificacion||'')+(c.driveLink?'\nCV en Drive: '+c.driveLink:'')+(c.notasFinales?'\n\nNotas del entrevistador:\n'+c.notasFinales:'');
+  var cuerpo=informeTexto(c).join('\n')+(c.driveLink?'\n\nCV en Google Drive: '+c.driveLink:'');
   if(CFG.ejsService&&CFG.ejsTemplate&&CFG.ejsPublic&&window.emailjs){
     try{
-      await emailjs.send(CFG.ejsService,CFG.ejsTemplate,{to_email:CFG.avilaEmail||AVILA_EMAIL_DEFAULT,subject:asunto,message:cuerpo,candidate_name:c.nombre,cv_link:c.driveLink||''});
-      alert('Correo enviado al Dr. Avila.');
-    }catch(e){alert('Error enviando correo via EmailJS: '+e.message+'. Se abrira tu cliente de correo como respaldo.');window.open('mailto:'+(CFG.avilaEmail||AVILA_EMAIL_DEFAULT)+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo));}
+      await emailjs.send(CFG.ejsService,CFG.ejsTemplate,{to_email:destino,to:destino,subject:asunto,message:cuerpo,candidate_name:c.nombre,cv_link:c.driveLink||''});
+      alert('Correo enviado. Si te llego a ti en vez de a '+destino+', revisa en emailjs.com que el campo "To Email" de tu plantilla diga {{to_email}} y no un correo fijo.');
+    }catch(e){alert('Error enviando correo via EmailJS: '+e.message+'. Se abrira tu cliente de correo como respaldo.');window.open('mailto:'+destino+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo));}
   }else{
     if(!CFG.ejsService)descargarInformePDF(id);
-    window.open('mailto:'+(CFG.avilaEmail||AVILA_EMAIL_DEFAULT)+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo));
+    window.open('mailto:'+destino+'?subject='+encodeURIComponent(asunto)+'&body='+encodeURIComponent(cuerpo));
   }
 };
 
@@ -1228,10 +1229,20 @@ var driveBadges='';
   if(c.psic&&c.psic.links&&c.psic.links.KOSTICK)driveBadges+=' <a class="drive-badge" href="'+esc(c.psic.links.KOSTICK)+'" target="_blank" rel="noopener" onclick="event.stopPropagation()">📎 Kostick en Drive</a>';
   var drive=driveBadges?'<div style="padding:0 12px 8px">'+driveBadges+'</div>':'';
   var psicQuick=(c.stage==='psic'&&!c.descartadoRH)?'<div class="psic-quick-acts" onclick="event.stopPropagation()"><button class="btn sm gold" onclick="closeModalDirect();openPsicForm(\''+c.id+'\')">Subir resultado</button><button class="btn sm" onclick="closeModalDirect();openPsicForm(\''+c.id+'\');setTimeout(function(){var b=gid(\'psic-btn\');if(b)b.scrollIntoView({block:\'center\'});},50)">IA analiza</button></div>':'';
-  var waQuick=(c.stage==='final'&&!c.descartadoRH&&cv.telefono)?'<div class="psic-quick-acts" onclick="event.stopPropagation()"><a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a></div>':'';
+  var waQuick=(c.stage==='final'&&!c.descartadoRH&&cv.telefono)?'<div class="psic-quick-acts" onclick="event.stopPropagation()"><a class="btn sm wa-btn" href="'+waLink(cv.telefono,waMensajePorEtapa(c))+'" target="_blank" rel="noopener">💬 WhatsApp</a></div>':'';
   return '<div class="kb-card '+stCls+'" draggable="true" ondragstart="kbDragStart(event,\''+c.id+'\')" ondragend="kbDragEnd(event)" onclick="openModal(\''+c.id+'\')"><div class="kb-card-bar" style="height:3px;background:var(--cream)"><div style="height:100%;width:'+Math.min(cs,100)+'%;background:'+(cs>=75?'var(--green)':cs>=55?'var(--amber)':'var(--red)')+'"></div></div><div class="kb-card-top"><div class="kb-card-name">'+esc(c.nombre)+'</div>'+(cv.telefono?'<div style="font-size:10px;color:var(--ink2)">'+esc(cv.telefono)+'</div>':'')+st+'</div>'+(pills?'<div class="kb-card-scores">'+pills+'</div>':'')+drive+psicQuick+waQuick+'</div>';
 }
 function waLink(tel,text){var d=String(tel||'').replace(/\D/g,'');if(!d)return'#';if(d.length<=10)d='57'+d;return 'https://wa.me/'+d+(text?'?text='+encodeURIComponent(text):'');}
+function waMensajePorEtapa(c){
+  var cargo=currentProceso&&currentProceso.cargo||'nuestra vacante';
+  var nombre=(c.nombre||'').split(' ')[0];
+  if(c.descartadoRH)return'';
+  if(c.stage==='cv')return'Hola '+nombre+'! Vimos tu hoja de vida para el cargo de '+cargo+' en Avila Law Consulting y nos gustaria invitarte a una entrevista. Tienes disponibilidad esta semana?';
+  if(c.stage==='interview')return'Hola '+nombre+'! Te escribimos de Avila Law Consulting sobre tu proceso de seleccion para el cargo de '+cargo+'. Quedamos atentos a coordinar tu entrevista.';
+  if(c.stage==='psic')return'Hola '+nombre+'! Continuas en el proceso de seleccion para '+cargo+' en Avila Law Consulting. El siguiente paso son las pruebas psicometricas, te compartimos los detalles por aca.';
+  if(c.stage==='final')return'Hola '+nombre+'! Felicitaciones, tu proceso de seleccion para el cargo de '+cargo+' en Avila Law Consulting avanzo a la etapa final. Pronto te contactamos con los siguientes pasos.';
+  return'';
+}
 function buildPipeline(){
   var byCol={};COLS_KB.forEach(function(col){byCol[col.id]=[];});
   cands.forEach(function(c){
@@ -1400,7 +1411,7 @@ window.openModal=function(id){
     if(c.stage==='psic'||c.stage==='final'){acts+='<button class="btn sm" onclick="closeModalDirect();openPsicForm(\''+c.id+'\')">'+( psic.done?'Ver pruebas':'Cargar pruebas')+'</button>';if(c.stage==='psic'&&psic.done&&psic.recomendacion==='Avanzar')acts+='<button class="btn sm green" onclick="enviarAFinal(\''+c.id+'\')">Informe Final</button>';}
     if(c.stage!=='cv')acts+='<button class="btn sm" style="background:var(--red)" onclick="descartarModal(\''+c.id+'\')">Descalificar</button>';
   }
-  if(cv.telefono)acts+='<a class="btn sm wa-btn" href="'+waLink(cv.telefono)+'" target="_blank" rel="noopener">💬 WhatsApp</a>';
+  if(cv.telefono)acts+='<a class="btn sm wa-btn" href="'+waLink(cv.telefono,waMensajePorEtapa(c))+'" target="_blank" rel="noopener">💬 WhatsApp</a>';
   acts+='<button class="btn sm ghost" onclick="descargarInformePDF(\''+c.id+'\')">⬇ Descargar informe PDF</button>';
   acts+='<button class="btn sm" style="background:#2a5ea8" onclick="notificarAvila(\''+c.id+'\')">✉ Notificar al Dr. Ávila</button>';
   gid('modal-actions').innerHTML=acts;
