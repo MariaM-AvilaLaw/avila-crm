@@ -611,7 +611,7 @@ window.analizarDesdeDrive=async function(fileId,fileName){
     var b64=await driveFetchFileBase64(fileId);
     var block={type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}};
     var raw=await callAI([{role:'user',content:[block,{type:'text',text:buildCvPrompt()}]}],1000);
-    var p=JSON.parse(raw);
+    var p=parseAIJson(raw);
     var cand={id:'cv-'+Date.now(),stage:'cv',nombre:p.nombre||fileName,fileName:fileName,analizadoEn:nowStr(),driveLink:'https://drive.google.com/file/d/'+fileId+'/view',driveFileId:fileId,cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null,potencialBanco:!!p.potencial_banco_talento,potencialBancoRazon:p.potencial_banco_talento_razon||''}};
     cands.unshift(cand);
     await guardarCandidato(cand);
@@ -869,7 +869,7 @@ window.revisarTodosConIA=async function(){
     try{
       var prompt='Eres asistente de RRHH de Avila Law Consulting. Perfil buscado para este cargo: "'+currentProceso.descripcion+'". Candidato: '+c.nombre+'. Analisis previo del CV: puntaje '+(c.cv.puntaje||0)+', veredicto '+(c.cv.veredicto||'')+', experiencia: '+(c.cv.experiencia||'')+', justificacion: '+(c.cv.justificacion||'')+'. Considerando especificamente el perfil buscado, revisa el puntaje y el veredicto de este candidato. Responde UNICAMENTE con JSON:\n{"puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases actualizadas explicando el puntaje frente al perfil buscado"}';
       var raw=await callAI([{role:'user',content:prompt}],400);
-      var p=JSON.parse(raw);
+      var p=parseAIJson(raw);
       c.cv=Object.assign({},c.cv,{puntaje:p.puntaje,veredicto:p.veredicto||c.cv.veredicto,justificacion:p.justificacion||c.cv.justificacion});
       await guardarCandidato(c);
     }catch(e){console.warn('Error revisando '+c.nombre,e);}
@@ -928,6 +928,13 @@ async function callAI(msgs,max){
   var d=await r.json();
   return(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').replace(/```json|```/g,'').trim();
 }
+function parseAIJson(raw){
+  var txt=String(raw||'').trim();
+  var s=txt.indexOf('{'),e=txt.lastIndexOf('}');
+  if(s>=0&&e>s)txt=txt.slice(s,e+1);
+  txt=txt.replace(/,\s*([}\]])/g,'$1');
+  return JSON.parse(txt);
+}
 function f2b(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=rej;r.readAsDataURL(file);});}
 function buildCvPrompt(){
   var perfil=currentProceso&&currentProceso.descripcion?'\n\nPerfil especifico que se busca para este cargo (usalo como criterio principal de calificacion): "'+currentProceso.descripcion+'"':'';
@@ -945,7 +952,7 @@ window.analizarCVs=async function(){
       var b64=await f2b(file);
       var block=file.type==='application/pdf'?{type:'document',source:{type:'base64',media_type:'application/pdf',data:b64}}:{type:'image',source:{type:'base64',media_type:file.type,data:b64}};
       var raw=await callAI([{role:'user',content:[block,{type:'text',text:buildCvPrompt()}]}],1000);
-      var p=JSON.parse(raw);
+      var p=parseAIJson(raw);
       var cand={id:'cv-'+Date.now()+'-'+i,stage:'cv',nombre:p.nombre||'Sin nombre',fileName:file.name,analizadoEn:nowStr(),cv:{puntaje:p.puntaje,veredicto:p.veredicto||'revisar',titulo:p.titulo_derecho||'no_indicado',tarjeta:p.tarjeta_profesional||'no_indicado',anosExp:p.anos_experiencia_estimados,experiencia:p.experiencia_relevante||'',justificacion:p.justificacion||'',alertas:Array.isArray(p.alertas)?p.alertas:[],telefono:p.telefono||null,email:p.email||null,potencialBanco:!!p.potencial_banco_talento,potencialBancoRazon:p.potencial_banco_talento_razon||''}};
       var idx=cands.findIndex(function(c){return c.fileName===file.name;});
       if(idx>=0)cands[idx]=cand;else cands.unshift(cand);
@@ -1027,7 +1034,7 @@ window.scoreWithAI=async function(id){
   var allQAs=Object.keys(Q).map(function(qid){return '['+qid+']\nPregunta: '+Q[qid].t+'\nMide: '+Q[qid].m+'\nRespuesta: '+(gid('qa-'+qid)&&gid('qa-'+qid).value||'sin respuesta');}).join('\n\n');
   try{
     var raw=await callAI([{role:'user',content:'Eres evaluador de RRHH para firma de abogados en Colombia. Candidato: '+c.nombre+'. Escala 1-5.\n\n'+allQAs+'\n\nResponde UNICAMENTE con JSON:\n{"scores":{"log1":{"score":3,"nota":"max 10 palabras"}}}'}],2000);
-    var scores=JSON.parse(raw).scores||{};
+    var scores=parseAIJson(raw).scores||{};
     Object.keys(scores).forEach(function(qid){var sel=gid('qr-'+qid);var nt=gid('ain-'+qid);if(sel&&scores[qid].score)sel.value=String(scores[qid].score);if(nt&&scores[qid].nota)nt.textContent='IA: '+scores[qid].nota;});
   }catch(e){alert('Error IA: '+e.message);}
   if(btn){btn.disabled=false;btn.textContent='Calificar con IA';}
@@ -1104,7 +1111,7 @@ window.analizarPruebas=async function(id){
   blocks.push({type:'text',text:'Eres psicologo organizacional. Evaluas resultados psicometricos de '+c.nombre+' para el cargo en Avila Law Consulting. Responde UNICAMENTE con JSON:\n{"tests":[{"nombre":"...","interpretacion":"...","fortalezas":["..."],"riesgos":["..."],"adecuacion":"Alta|Media|Baja"}],"conclusion":"...","recomendacion":"Avanzar|Revisar|No avanzar","justificacion":"..."}'});
   try{
     var raw=await callAI([{role:'user',content:blocks}],2000);
-    var p=JSON.parse(raw);
+    var p=parseAIJson(raw);
     c.psic={done:true,analizadoEn:nowStr(),tests:p.tests||[],conclusion:p.conclusion||'',recomendacion:p.recomendacion||'Revisar',justificacion:p.justificacion||'',links:Object.assign({},(c.psic&&c.psic.links)||{},links)};
     await guardarCandidato(c);psicFiles={};psicLinks={};tab='pipeline';formId=null;render();
   }catch(e){if(btn){btn.disabled=false;btn.textContent='Analizar con IA';}if(ld)ld.textContent='';alert('Error: '+e.message);}
@@ -1154,7 +1161,7 @@ window.reevaluarConIA=async function(id){
   try{
     var prompt='Eres asistente de RRHH de Avila Law Consulting. Este es el analisis previo del CV de '+c.nombre+':\nPuntaje original: '+(cv.puntaje||0)+'\nVeredicto original: '+(cv.veredicto||'')+'\nJustificacion original: '+(cv.justificacion||'')+'\n\nEl reclutador agrego estas notas adicionales sobre el candidato:\n"'+notas+'"\n\nConsiderando esta informacion adicional junto con el analisis original, reevalua el puntaje y el veredicto. Responde UNICAMENTE con JSON:\n{"puntaje":0,"veredicto":"citar|revisar|no_citar","razonamiento_detallado":"explica en 3-5 frases el puntaje original, como las notas lo modifican, y el resultado final","alertas":["..."]}';
     var raw=await callAI([{role:'user',content:prompt}],1000);
-    var p=JSON.parse(raw);
+    var p=parseAIJson(raw);
     c.historialReeval=c.historialReeval||[];
     c.historialReeval.push({fecha:nowStr(),notas:notas,puntajeAnterior:cv.puntaje||0,puntajeNuevo:p.puntaje});
     c.cv=Object.assign({},cv,{puntaje:p.puntaje,veredicto:p.veredicto||cv.veredicto,razonamientoDetallado:p.razonamiento_detallado||'',alertas:Array.isArray(p.alertas)?p.alertas:(cv.alertas||[])});
