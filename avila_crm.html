@@ -304,9 +304,10 @@ h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
   <div class="modal-box">
     <h3>Proceso anterior encontrado</h3>
     <p style="font-size:13.5px;color:var(--ink2);margin-bottom:16px" id="importar-msg">¿Deseas importar candidatos del proceso anterior que no avanzaron de la etapa de CV?</p>
+    <p style="font-size:12px;color:var(--ink2);margin-bottom:16px;display:none" id="importar-progreso"></p>
     <div class="btn-row">
-      <button class="btn gold" onclick="importarCandidatosProcesoAnterior()">Sí, importar</button>
-      <button class="btn ghost" onclick="cerrarModalImportar()">No, empezar desde cero</button>
+      <button class="btn gold" id="importar-btn-si" onclick="importarCandidatosProcesoAnterior()">Sí, importar</button>
+      <button class="btn ghost" id="importar-btn-no" onclick="cerrarModalImportar()">No, empezar desde cero</button>
     </div>
   </div>
 </div>
@@ -793,8 +794,10 @@ window.cerrarModalImportar=cerrarModalImportar;
 window.importarCandidatosProcesoAnterior=async function(){
   if(!procesoAnteriorParaImportar||!procesoNuevoCreado)return;
   var anteriorProc=procesoAnteriorParaImportar,nuevoProc=procesoNuevoCreado;
-  gid('modal-importar').classList.remove('open');
   procesoAnteriorParaImportar=null;procesoNuevoCreado=null;
+  var btnSi=gid('importar-btn-si'),btnNo=gid('importar-btn-no'),prog=gid('importar-progreso');
+  if(btnSi)btnSi.disabled=true;if(btnNo)btnNo.disabled=true;
+  if(prog)prog.style.display='block';
   try{
     var rows=await sbGet('Candidatos');
     var anteriores=rows.filter(function(r){return r.data&&r.data.tipo==='candidato'&&r.data.procesoId===anteriorProc._id;}).map(function(r){return r.data;});
@@ -805,11 +808,18 @@ window.importarCandidatosProcesoAnterior=async function(){
     for(var i=0;i<aImportar.length;i++){
       var orig=aImportar[i];
       var nuevo={id:'imp-'+Date.now()+'-'+i,stage:'cv',nombre:orig.nombre,fileName:orig.fileName||'',analizadoEn:orig.analizadoEn||nowStr(),driveLink:orig.driveLink||'',driveFileId:orig.driveFileId||'',cv:orig.cv||{},notas:'Importado del proceso anterior ('+(anteriorProc.cargo||'')+').'};
+      if(nuevoProc.descripcion){
+        if(prog)prog.textContent='Importando y analizando con IA '+(i+1)+'/'+aImportar.length+': '+nuevo.nombre;
+        try{nuevo.cv=await reanalizarCvConPerfil(nuevo.cv,nuevo.nombre,nuevoProc.descripcion);}catch(e){console.warn('Error reanalizando '+nuevo.nombre,e);}
+      }
       await sbUpsert('Candidatos',[{id:nuevo.id,data:Object.assign({},nuevo,{tipo:'candidato',procesoId:nuevoProc._id})}]);
     }
     if(currentProceso&&currentProceso._id===nuevoProc._id){await cargarCandidatos(nuevoProc._id);render();}
-    alert(aImportar.length+' candidato(s) importado(s) del proceso anterior.');
-  }catch(e){alert('Error importando candidatos: '+e.message);}
+    gid('modal-importar').classList.remove('open');
+    alert(aImportar.length+' candidato(s) importado(s) del proceso anterior.'+(nuevoProc.descripcion?' Se recalificaron con IA segun el perfil buscado.':''));
+  }catch(e){gid('modal-importar').classList.remove('open');alert('Error importando candidatos: '+e.message);}
+  if(btnSi)btnSi.disabled=false;if(btnNo)btnNo.disabled=false;
+  if(prog){prog.style.display='none';prog.textContent='';}
 };
 
 async function abrirProceso(id){
@@ -867,10 +877,7 @@ window.revisarTodosConIA=async function(){
     if(box)box.insertAdjacentHTML('beforeend','<div id="revisar-progreso" style="font-size:12px;color:var(--ink2);margin-top:6px">Revisando '+(i+1)+'/'+activos.length+': '+esc(c.nombre)+'</div>');
     var prevProgreso=gid('revisar-progreso');
     try{
-      var prompt='Eres asistente de RRHH de Avila Law Consulting. Perfil buscado para este cargo: "'+currentProceso.descripcion+'". Candidato: '+c.nombre+'. Analisis previo del CV: puntaje '+(c.cv.puntaje||0)+', veredicto '+(c.cv.veredicto||'')+', experiencia: '+(c.cv.experiencia||'')+', justificacion: '+(c.cv.justificacion||'')+'. Considerando especificamente el perfil buscado, revisa el puntaje y el veredicto de este candidato. Responde UNICAMENTE con JSON:\n{"puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases actualizadas explicando el puntaje frente al perfil buscado"}';
-      var raw=await callAI([{role:'user',content:prompt}],400);
-      var p=parseAIJson(raw);
-      c.cv=Object.assign({},c.cv,{puntaje:p.puntaje,veredicto:p.veredicto||c.cv.veredicto,justificacion:p.justificacion||c.cv.justificacion});
+      c.cv=await reanalizarCvConPerfil(c.cv,c.nombre,currentProceso.descripcion);
       await guardarCandidato(c);
     }catch(e){console.warn('Error revisando '+c.nombre,e);}
     if(prevProgreso)prevProgreso.remove();
@@ -934,6 +941,12 @@ function parseAIJson(raw){
   if(s>=0&&e>s)txt=txt.slice(s,e+1);
   txt=txt.replace(/,\s*([}\]])/g,'$1');
   return JSON.parse(txt);
+}
+async function reanalizarCvConPerfil(cv,nombre,descripcion){
+  var prompt='Eres asistente de RRHH de Avila Law Consulting. Perfil buscado para este cargo: "'+descripcion+'". Candidato: '+nombre+'. Analisis previo del CV: puntaje '+((cv&&cv.puntaje)||0)+', veredicto '+((cv&&cv.veredicto)||'')+', experiencia: '+((cv&&cv.experiencia)||'')+', justificacion: '+((cv&&cv.justificacion)||'')+'. Considerando especificamente el perfil buscado, revisa el puntaje y el veredicto de este candidato. Responde UNICAMENTE con JSON:\n{"puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases actualizadas explicando el puntaje frente al perfil buscado"}';
+  var raw=await callAI([{role:'user',content:prompt}],400);
+  var p=parseAIJson(raw);
+  return Object.assign({},cv,{puntaje:p.puntaje,veredicto:p.veredicto||(cv&&cv.veredicto),justificacion:p.justificacion||(cv&&cv.justificacion)});
 }
 function f2b(file){return new Promise(function(res,rej){var r=new FileReader();r.onload=function(){res(r.result.split(',')[1]);};r.onerror=rej;r.readAsDataURL(file);});}
 function buildCvPrompt(){
