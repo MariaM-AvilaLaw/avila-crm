@@ -935,12 +935,30 @@ async function callAI(msgs,max){
   var d=await r.json();
   return(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').replace(/```json|```/g,'').trim();
 }
+function repairJsonQuotes(txt){
+  var out='',inStr=false;
+  for(var i=0;i<txt.length;i++){
+    var ch=txt[i];
+    if(ch==='"'&&txt[i-1]!=='\\'){
+      if(!inStr){inStr=true;out+=ch;continue;}
+      var j=i+1;while(j<txt.length&&/\s/.test(txt[j]))j++;
+      var nextCh=txt[j];
+      if(nextCh===':'||nextCh===','||nextCh==='}'||nextCh===']'||j>=txt.length){inStr=false;out+=ch;continue;}
+      out+='\\"';continue;
+    }
+    out+=ch;
+  }
+  return out;
+}
 function parseAIJson(raw){
   var txt=String(raw||'').trim();
   var s=txt.indexOf('{'),e=txt.lastIndexOf('}');
   if(s>=0&&e>s)txt=txt.slice(s,e+1);
   txt=txt.replace(/,\s*([}\]])/g,'$1');
-  return JSON.parse(txt);
+  try{return JSON.parse(txt);}catch(err){
+    var repaired=repairJsonQuotes(txt).replace(/,\s*([}\]])/g,'$1');
+    return JSON.parse(repaired);
+  }
 }
 async function reanalizarCvConPerfil(cv,nombre,descripcion){
   var prompt='Eres asistente de RRHH de Avila Law Consulting. Perfil buscado para este cargo: "'+descripcion+'". Candidato: '+nombre+'. Analisis previo del CV: puntaje '+((cv&&cv.puntaje)||0)+', veredicto '+((cv&&cv.veredicto)||'')+', experiencia: '+((cv&&cv.experiencia)||'')+', justificacion: '+((cv&&cv.justificacion)||'')+'. Considerando especificamente el perfil buscado, revisa el puntaje y el veredicto de este candidato. Responde UNICAMENTE con JSON:\n{"puntaje":0,"veredicto":"citar|revisar|no_citar","justificacion":"1-2 frases actualizadas explicando el puntaje frente al perfil buscado"}';
