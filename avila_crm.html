@@ -312,6 +312,23 @@ h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
   </div>
 </div>
 
+<!-- MODAL AGENDAR ENTREVISTA -->
+<div class="modal-bg" id="modal-agendar">
+  <div class="modal-box">
+    <h3>Agendar entrevista</h3>
+    <p style="font-size:13px;color:var(--ink2);margin-bottom:14px" id="agendar-cand-nombre"></p>
+    <div class="field"><label>Fecha</label><input type="date" id="ag-fecha"></div>
+    <div class="field"><label>Hora</label><input type="time" id="ag-hora" value="09:00"></div>
+    <div class="field"><label>Duración</label><select id="ag-duracion"><option value="30">30 min</option><option value="45" selected>45 min</option><option value="60">1 hora</option><option value="90">1 hora 30</option></select></div>
+    <div class="field"><label>Lugar</label><input type="text" id="ag-lugar"></div>
+    <div class="field"><label>Cuerpo de la invitación</label><textarea id="ag-cuerpo" rows="4"></textarea></div>
+    <div class="btn-row">
+      <button class="btn gold" onclick="confirmarAgendarEntrevista()">📅 Abrir Google Calendar</button>
+      <button class="btn ghost" onclick="cerrarModalAgendar()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CONFIGURACION -->
 <div class="modal-bg" id="modal-config">
   <div class="modal-box" style="max-width:520px;max-height:88vh;overflow-y:auto">
@@ -432,6 +449,7 @@ var modalId=null;
 var driveLinkEditing=null;
 var procesoAnteriorParaImportar=null;
 var procesoNuevoCreado=null;
+var agendarCandId=null;
 
 /* ══ UTILS ══ */
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
@@ -1414,7 +1432,7 @@ window.kbDrop=async function(e,colId){
   switch(colId){
     case 'cv_ok':c.stage='cv';c.waSent=false;c.scheduled=null;c.descartadoRH=false;break;
     case 'cv_wa':c.stage='cv';c.waSent=true;c.descartadoRH=false;break;
-    case 'interview':c.stage='interview';c.descartadoRH=false;break;
+    case 'interview':abrirModalAgendar(id);return;
     case 'psic':c.stage='psic';c.descartadoRH=false;break;
     case 'final':c.stage='final';c.descartadoRH=false;break;
     case 'desc':
@@ -1427,6 +1445,51 @@ window.kbDrop=async function(e,colId){
   }
   await guardarCandidato(c);
   render();
+};
+
+/* ══ AGENDAR ENTREVISTA (Google Calendar) ══ */
+function abrirModalAgendar(id){
+  var c=findCand(id);if(!c)return;
+  agendarCandId=id;
+  var cargo=(currentProceso&&currentProceso.cargo)||'la vacante';
+  var email=(c.cv&&c.cv.email)||'';
+  gid('agendar-cand-nombre').textContent=c.nombre+(email?' — '+email:' — sin correo registrado en el CV, agrega el invitado manualmente en Google Calendar');
+  var maniana=new Date();maniana.setDate(maniana.getDate()+1);
+  gid('ag-fecha').value=maniana.toISOString().slice(0,10);
+  gid('ag-hora').value='09:00';
+  gid('ag-duracion').value='45';
+  gid('ag-lugar').value='Oficina Avila Law Consulting, Bogota';
+  gid('ag-cuerpo').value='Hola '+(c.nombre||'').split(' ')[0]+',\n\nTe confirmamos tu entrevista para el cargo de '+cargo+' en Avila Law Consulting.\n\nQuedamos atentos.';
+  gid('modal-agendar').classList.add('open');
+}
+window.cerrarModalAgendar=function(){gid('modal-agendar').classList.remove('open');agendarCandId=null;};
+window.confirmarAgendarEntrevista=async function(){
+  var c=findCand(agendarCandId);
+  if(!c){cerrarModalAgendar();return;}
+  var fecha=gid('ag-fecha').value,hora=gid('ag-hora').value;
+  if(!fecha||!hora){alert('Selecciona fecha y hora.');return;}
+  var dur=parseInt(gid('ag-duracion').value,10)||45;
+  var lugar=gid('ag-lugar').value.trim();
+  var cuerpo=gid('ag-cuerpo').value.trim();
+  var email=(c.cv&&c.cv.email)||'';
+  var start=new Date(fecha+'T'+hora+':00');
+  var end=new Date(start.getTime()+dur*60000);
+  function pad(n){return n<10?'0'+n:''+n;}
+  function fmt(d){return d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate())+'T'+pad(d.getHours())+pad(d.getMinutes())+'00';}
+  var subject='Entrevista - '+((currentProceso&&currentProceso.cargo)||'Vacante')+' - '+c.nombre;
+  var url='https://calendar.google.com/calendar/render?action=TEMPLATE'
+    +'&text='+encodeURIComponent(subject)
+    +'&dates='+fmt(start)+'/'+fmt(end)
+    +'&details='+encodeURIComponent(cuerpo)
+    +'&location='+encodeURIComponent(lugar)
+    +(email?'&add='+encodeURIComponent(email):'');
+  c.stage='interview';c.descartadoRH=false;
+  c.scheduled={fecha:fecha+' '+hora,lugar:lugar};
+  await guardarCandidato(c);
+  cerrarModalAgendar();
+  render();
+  window.open(url,'_blank');
+  if(!email)alert('Este candidato no tiene correo registrado en su CV. Agrega el invitado manualmente en Google Calendar.');
 };
 
 /* ══ PREFILTRO ══ */
