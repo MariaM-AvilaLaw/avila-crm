@@ -914,24 +914,47 @@ function anthropicBlocksToGeminiParts(content){
     return{text:''};
   });
 }
-async function callGemini(msgs,max){
+function sleepMs(ms){return new Promise(function(res){setTimeout(res,ms);});}
+function extractGeminiRetrySeconds(errBody){
+  try{
+    var details=(errBody&&errBody.error&&errBody.error.details)||[];
+    var info=details.find(function(d){return d.retryDelay;});
+    if(info&&info.retryDelay)return parseInt(info.retryDelay,10)||null;
+  }catch(e){}
+  return null;
+}
+async function callGemini(msgs,max,_retried){
   var contents=msgs.map(function(m){return{role:m.role==='assistant'?'model':'user',parts:anthropicBlocksToGeminiParts(m.content)};});
   var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key='+encodeURIComponent(CFG.geminiKey),{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:contents,generationConfig:{maxOutputTokens:max||1500}})
   });
-  if(!r.ok){var errTxt='';try{errTxt=(await r.json()).error.message;}catch(e){}throw new Error('Gemini error '+r.status+(errTxt?': '+errTxt:''));}
+  if(!r.ok){
+    var errBody=null;try{errBody=await r.json();}catch(e){}
+    var errTxt=(errBody&&errBody.error&&errBody.error.message)||'';
+    if(r.status===429&&!_retried){
+      var retrySec=extractGeminiRetrySeconds(errBody)||10;
+      if(retrySec<=65){await sleepMs((retrySec+1)*1000);return callGemini(msgs,max,true);}
+    }
+    throw new Error('Gemini error '+r.status+(errTxt?': '+errTxt:''));
+  }
   var d=await r.json();
   var cand=(d.candidates||[])[0];
   if(!cand)throw new Error('Gemini no devolvio respuesta (posible bloqueo de contenido).');
   return(cand.content&&cand.content.parts||[]).map(function(p){return p.text||'';}).join('').replace(/```json|```/g,'').trim();
 }
-async function callAI(msgs,max){
+async function callAI(msgs,max,_retried){
   if(!CFG.anthropicKey&&CFG.geminiKey)return callGemini(msgs,max);
   var headers={'Content-Type':'application/json'};
   if(CFG.anthropicKey){headers['x-api-key']=CFG.anthropicKey;headers['anthropic-version']='2023-06-01';headers['anthropic-dangerous-direct-browser-access']='true';}
   var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:headers,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:max||1500,messages:msgs})});
-  if(!r.ok)throw new Error('Error '+r.status+(!CFG.anthropicKey?' (configura tu Anthropic API Key o Gemini API Key en Configuración)':''));
+  if(!r.ok){
+    if(r.status===429&&!_retried){
+      var retryAfter=parseInt(r.headers.get('retry-after')||'10',10)||10;
+      if(retryAfter<=65){await sleepMs((retryAfter+1)*1000);return callAI(msgs,max,true);}
+    }
+    throw new Error('Error '+r.status+(!CFG.anthropicKey?' (configura tu Anthropic API Key o Gemini API Key en Configuración)':''));
+  }
   var d=await r.json();
   return(d.content||[]).filter(function(b){return b.type==='text';}).map(function(b){return b.text;}).join('').replace(/```json|```/g,'').trim();
 }
