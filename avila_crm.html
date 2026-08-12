@@ -299,6 +299,18 @@ h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
   </div>
 </div>
 
+<!-- MODAL IMPORTAR CANDIDATOS DE PROCESO ANTERIOR -->
+<div class="modal-bg" id="modal-importar">
+  <div class="modal-box">
+    <h3>Proceso anterior encontrado</h3>
+    <p style="font-size:13.5px;color:var(--ink2);margin-bottom:16px" id="importar-msg">¿Deseas importar candidatos del proceso anterior que no avanzaron de la etapa de CV?</p>
+    <div class="btn-row">
+      <button class="btn gold" onclick="importarCandidatosProcesoAnterior()">Sí, importar</button>
+      <button class="btn ghost" onclick="cerrarModalImportar()">No, empezar desde cero</button>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL CONFIGURACION -->
 <div class="modal-bg" id="modal-config">
   <div class="modal-box" style="max-width:520px;max-height:88vh;overflow-y:auto">
@@ -417,6 +429,8 @@ var psicLinks={};
 var psicLinkEditing={};
 var modalId=null;
 var driveLinkEditing=null;
+var procesoAnteriorParaImportar=null;
+var procesoNuevoCreado=null;
 
 /* ══ UTILS ══ */
 function esc(s){if(!s)return'';var d=document.createElement('div');d.textContent=String(s);return d.innerHTML;}
@@ -754,14 +768,49 @@ window.cerrarModalProceso=cerrarModalProceso;
 async function crearProceso(){
   var cargo=gid('np-cargo').value.trim();
   if(!cargo){alert('Ingresa el nombre del cargo.');return;}
+  var anterior=procesos.find(function(x){return x.cargo&&x.cargo.trim().toLowerCase()===cargo.toLowerCase();});
   var p={_id:'proc-'+Date.now(),tipo:'proceso',cargo:cargo,modalidad:gid('np-modalidad').value,area:gid('np-area').value.trim(),descripcion:gid('np-desc').value.trim(),estado:'activo',creadoEn:nowStr(),totalCands:0,finalCands:0};
   await guardarProceso(p);
   cerrarModalProceso();
   gid('np-cargo').value='';gid('np-area').value='';gid('np-desc').value='';
   await cargarProcesos();
   renderProcesos();
+  if(anterior){
+    procesoAnteriorParaImportar=anterior;
+    procesoNuevoCreado=p;
+    gid('importar-msg').textContent='Ya existe un proceso anterior para el cargo "'+cargo+'". ¿Deseas importar candidatos del proceso anterior que no avanzaron de la etapa de CV?';
+    gid('modal-importar').classList.add('open');
+  }
 }
 window.crearProceso=crearProceso;
+
+function cerrarModalImportar(){
+  gid('modal-importar').classList.remove('open');
+  procesoAnteriorParaImportar=null;procesoNuevoCreado=null;
+}
+window.cerrarModalImportar=cerrarModalImportar;
+
+window.importarCandidatosProcesoAnterior=async function(){
+  if(!procesoAnteriorParaImportar||!procesoNuevoCreado)return;
+  var anteriorProc=procesoAnteriorParaImportar,nuevoProc=procesoNuevoCreado;
+  gid('modal-importar').classList.remove('open');
+  procesoAnteriorParaImportar=null;procesoNuevoCreado=null;
+  try{
+    var rows=await sbGet('Candidatos');
+    var anteriores=rows.filter(function(r){return r.data&&r.data.tipo==='candidato'&&r.data.procesoId===anteriorProc._id;}).map(function(r){return r.data;});
+    var aImportar=anteriores.filter(function(c){
+      var v=c.cv&&c.cv.veredicto;
+      return c.stage==='cv'||v==='revisar'||v==='no_citar';
+    });
+    for(var i=0;i<aImportar.length;i++){
+      var orig=aImportar[i];
+      var nuevo={id:'imp-'+Date.now()+'-'+i,stage:'cv',nombre:orig.nombre,fileName:orig.fileName||'',analizadoEn:orig.analizadoEn||nowStr(),driveLink:orig.driveLink||'',driveFileId:orig.driveFileId||'',cv:orig.cv||{},notas:'Importado del proceso anterior ('+(anteriorProc.cargo||'')+').'};
+      await sbUpsert('Candidatos',[{id:nuevo.id,data:Object.assign({},nuevo,{tipo:'candidato',procesoId:nuevoProc._id})}]);
+    }
+    if(currentProceso&&currentProceso._id===nuevoProc._id){await cargarCandidatos(nuevoProc._id);render();}
+    alert(aImportar.length+' candidato(s) importado(s) del proceso anterior.');
+  }catch(e){alert('Error importando candidatos: '+e.message);}
+};
 
 async function abrirProceso(id){
   var p=procesos.find(function(x){return x._id===id;});
