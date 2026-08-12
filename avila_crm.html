@@ -923,7 +923,9 @@ function extractGeminiRetrySeconds(errBody){
   }catch(e){}
   return null;
 }
-async function callGemini(msgs,max,_retried){
+var RETRYABLE_STATUS={429:1,500:1,502:1,503:1,504:1,529:1};
+async function callGemini(msgs,max,_attempt){
+  _attempt=_attempt||1;
   var contents=msgs.map(function(m){return{role:m.role==='assistant'?'model':'user',parts:anthropicBlocksToGeminiParts(m.content)};});
   var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key='+encodeURIComponent(CFG.geminiKey),{
     method:'POST',headers:{'Content-Type':'application/json'},
@@ -932,9 +934,9 @@ async function callGemini(msgs,max,_retried){
   if(!r.ok){
     var errBody=null;try{errBody=await r.json();}catch(e){}
     var errTxt=(errBody&&errBody.error&&errBody.error.message)||'';
-    if(r.status===429&&!_retried){
-      var retrySec=extractGeminiRetrySeconds(errBody)||10;
-      if(retrySec<=65){await sleepMs((retrySec+1)*1000);return callGemini(msgs,max,true);}
+    if(RETRYABLE_STATUS[r.status]&&_attempt<=2){
+      var retrySec=r.status===429?(extractGeminiRetrySeconds(errBody)||10):(_attempt*8);
+      if(retrySec<=65){await sleepMs((retrySec+1)*1000);return callGemini(msgs,max,_attempt+1);}
     }
     throw new Error('Gemini error '+r.status+(errTxt?': '+errTxt:''));
   }
@@ -943,15 +945,16 @@ async function callGemini(msgs,max,_retried){
   if(!cand)throw new Error('Gemini no devolvio respuesta (posible bloqueo de contenido).');
   return(cand.content&&cand.content.parts||[]).map(function(p){return p.text||'';}).join('').replace(/```json|```/g,'').trim();
 }
-async function callAI(msgs,max,_retried){
+async function callAI(msgs,max,_attempt){
+  _attempt=_attempt||1;
   if(!CFG.anthropicKey&&CFG.geminiKey)return callGemini(msgs,max);
   var headers={'Content-Type':'application/json'};
   if(CFG.anthropicKey){headers['x-api-key']=CFG.anthropicKey;headers['anthropic-version']='2023-06-01';headers['anthropic-dangerous-direct-browser-access']='true';}
   var r=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:headers,body:JSON.stringify({model:'claude-sonnet-4-6',max_tokens:max||1500,messages:msgs})});
   if(!r.ok){
-    if(r.status===429&&!_retried){
-      var retryAfter=parseInt(r.headers.get('retry-after')||'10',10)||10;
-      if(retryAfter<=65){await sleepMs((retryAfter+1)*1000);return callAI(msgs,max,true);}
+    if(RETRYABLE_STATUS[r.status]&&_attempt<=2){
+      var retryAfter=parseInt(r.headers.get('retry-after')||'',10)||(_attempt*8);
+      if(retryAfter<=65){await sleepMs((retryAfter+1)*1000);return callAI(msgs,max,_attempt+1);}
     }
     throw new Error('Error '+r.status+(!CFG.anthropicKey?' (configura tu Anthropic API Key o Gemini API Key en Configuración)':''));
   }
