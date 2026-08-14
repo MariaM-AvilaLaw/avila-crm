@@ -449,6 +449,7 @@ var psicLinks={};
 var psicLinkEditing={};
 var modalId=null;
 var driveLinkEditing=null;
+var pruebasLinkEditing=null;
 var procesoAnteriorParaImportar=null;
 var procesoNuevoCreado=null;
 var agendarCandId=null;
@@ -1299,6 +1300,15 @@ window.guardarDriveLinkManual=async function(id){
   await guardarCandidato(c);
   render();openModal(id);
 };
+window.editarPruebasLink=function(id){pruebasLinkEditing=id;openModal(id);};
+window.guardarPruebasLinkManual=async function(id){
+  var c=findCand(id);if(!c)return;
+  var val=(gid('pruebas-link-manual')&&gid('pruebas-link-manual').value.trim())||'';
+  c.pruebasLink=val;
+  pruebasLinkEditing=null;
+  await guardarCandidato(c);
+  render();openModal(id);
+};
 window.reevaluarConIA=async function(id){
   var c=findCand(id);if(!c)return;
   var notas=(gid('notes-extra')&&gid('notes-extra').value)||'';
@@ -1442,7 +1452,7 @@ function waMensajePorEtapa(c){
   if(c.descartadoRH)return'';
   if(c.stage==='cv')return'Hola '+nombre+'! Vimos tu hoja de vida para el cargo de '+cargo+' en Avila Law Consulting y nos gustaria invitarte a una entrevista. Tienes disponibilidad esta semana?';
   if(c.stage==='interview')return'Hola '+nombre+'! Te escribimos de Avila Law Consulting sobre tu proceso de seleccion para el cargo de '+cargo+'. Quedamos atentos a coordinar tu entrevista.';
-  if(c.stage==='psic')return'Hola '+nombre+'! Continuas en el proceso de seleccion para '+cargo+' en Avila Law Consulting. El siguiente paso son las pruebas psicometricas, te compartimos los detalles por aca.';
+  if(c.stage==='psic'){var link=c.pruebasLink||'[Link de las pruebas]';return'¡Hola '+nombre+'! 🎉 Tengo una muy buena noticia para compartirte: luego de revisar tu entrevista, hemos decidido avanzar contigo en nuestro proceso de selección para el cargo de '+cargo+' en Ávila Law Consulting. ¡Felicitaciones! El siguiente paso son las pruebas psicométricas. Te comparto el link para que las puedas realizar: '+link+' Te recomendamos tener en cuenta lo siguiente: ✅ Ábrelas desde un computador 📷 Las pruebas solicitan activar la cámara durante su realización 🕐 Busca un espacio tranquilo y sin interrupciones. Cualquier duda estoy aquí para ayudarte. ¡Mucho éxito! 🙌 María Mónica - RRHH Ávila Law Consulting';}
   if(c.stage==='final')return'Hola '+nombre+'! Felicitaciones, tu proceso de seleccion para el cargo de '+cargo+' en Avila Law Consulting avanzo a la etapa final. Pronto te contactamos con los siguientes pasos.';
   return'';
 }
@@ -1632,6 +1642,7 @@ window.openModal=function(id){
     body+='<div class="modal-section"><div class="modal-section-title">Entrevista RRHH</div><div class="history-item"><div style="display:flex;align-items:center;gap:12px;margin-bottom:10px"><span style="font-family:Source Serif 4,serif;font-size:28px;font-weight:700;color:'+vColor(iv.verdict||'')+'">'+(iv.total||0)+'</span><span class="badge '+vClass(iv.verdict||'')+'">'+esc(iv.verdictLabel||'')+'</span></div>'+CATS.map(function(cat){var s=(iv.catScores&&iv.catScores[cat.id])||0;var cl=s>=75?'var(--green)':s>=55?'var(--amber)':'var(--red)';return '<div style="display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid var(--line);font-size:12px"><span>'+cat.label+'</span><span style="font-weight:700;color:'+cl+'">'+s+'</span></div>';}).join('')+(iv.notes?'<div style="margin-top:8px;padding:8px;background:var(--cream);border-radius:6px;font-size:12px">'+esc(iv.notes)+'</div>':'')+'<div style="margin-top:12px"><details><summary style="cursor:pointer;font-weight:700;color:var(--gold);font-size:12px;margin-bottom:8px">Ver respuestas con razonamiento</summary>'+CATS.map(function(cat){return '<div style="margin-bottom:10px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gold);margin-bottom:4px">'+cat.label+'</div>'+cat.qs.map(function(qid){var a=(iv.answers&&iv.answers[qid])||{};var rc=a.rating>=4?'var(--green)':a.rating>=3?'var(--amber)':'var(--red)';return '<div style="padding:7px;border-left:3px solid '+rc+';background:#f9f6f0;border-radius:0 6px 6px 0;margin-bottom:5px"><div style="font-size:11px;font-weight:600">'+esc(a.text||Q[qid].t)+'</div>'+(a.respuesta?'<div style="font-size:11px;color:var(--ink2);margin:2px 0">'+esc(a.respuesta)+'</div>':'')+(a.aiNote?'<div style="font-size:11px;color:#2a8f9e;font-style:italic">'+esc(a.aiNote)+'</div>':'')+'<div style="font-size:11px;font-weight:700;color:'+rc+'">'+(a.rating||0)+'/5</div></div>';}).join('')+'</div>';}).join('')+'</details></div></div></div>';
   }else{body+='<div class="modal-section"><div class="modal-section-title">Entrevista RRHH</div><div class="history-item" style="color:var(--ink2);font-size:13px">'+(c.scheduled&&c.scheduled.fecha?'Agendada: '+c.scheduled.fecha:'Entrevista pendiente')+'</div></div>';}
   body+='<div class="modal-section"><div class="modal-section-title">Pruebas Psicometricas</div>';
+  body+=((c.pruebasLink&&pruebasLinkEditing!==c.id)?'<p style="margin-bottom:8px"><a class="drive-badge" href="'+esc(c.pruebasLink)+'" target="_blank" rel="noopener">🔗 Link de las pruebas psicometricas</a> <button class="lbtn" onclick="editarPruebasLink(\''+c.id+'\')">Cambiar</button></p>':'<div style="margin-bottom:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center"><input type="text" id="pruebas-link-manual" value="'+esc(c.pruebasLink||'')+'" placeholder="Pegar link de las pruebas psicometricas" style="flex:1;min-width:160px;padding:6px 8px;border:1px solid var(--line);border-radius:6px;font-size:12px;background:var(--cream)" onkeydown="if(event.key===\'Enter\'){event.preventDefault();guardarPruebasLinkManual(\''+c.id+'\');}"><button class="btn sm" onclick="guardarPruebasLinkManual(\''+c.id+'\')">Guardar link</button></div>');
   if(psic.done){var rc=psic.recomendacion==='Avanzar'?'green':psic.recomendacion==='Revisar'?'amber':'red';body+='<div class="history-item"><div style="display:flex;gap:10px;margin-bottom:8px"><span class="badge '+rc+'">'+esc(psic.recomendacion)+'</span><span style="font-size:13px;font-weight:600">'+esc(psic.conclusion)+'</span></div><p style="font-size:12px;color:var(--ink2)">'+esc(psic.justificacion)+'</p>'+(psic.tests||[]).map(function(t){var tc=t.adecuacion==='Alta'?'green':t.adecuacion==='Media'?'amber':'red';return '<div style="margin-top:8px;padding:8px;border:1px solid var(--line);border-radius:6px"><div style="display:flex;gap:8px;margin-bottom:4px"><b style="font-size:12px">'+esc(t.nombre)+'</b><span class="badge '+tc+'">'+esc(t.adecuacion)+'</span></div><p style="font-size:12px;color:var(--ink2)">'+esc(t.interpretacion)+'</p>'+(t.fortalezas&&t.fortalezas.length?'<div style="font-size:11.5px;color:var(--green)">OK: '+t.fortalezas.map(esc).join(' | ')+'</div>':'')+(t.riesgos&&t.riesgos.length?'<div style="font-size:11.5px;color:var(--red)">Riesgos: '+t.riesgos.map(esc).join(' | ')+'</div>':'')+'</div>';}).join('')+'</div>';}
   else{body+='<div class="history-item" style="color:var(--ink2);font-size:13px">Pruebas psicometricas pendientes</div>';}
   body+='</div>';
