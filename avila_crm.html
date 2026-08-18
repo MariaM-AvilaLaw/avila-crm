@@ -478,6 +478,7 @@ function pondFinal(c){
   if(ent==null||psic==null)return null;
   return Math.round(ent*0.6+psic*0.4);
 }
+function rankScore(c){var pf=pondFinal(c);return pf!=null?pf:composite(c);}
 function showSync(){var el=gid('sync-ind');if(el){el.classList.add('visible');setTimeout(function(){el.classList.remove('visible');},2000);}}
 
 /* ══ SUPABASE ══ */
@@ -1711,15 +1712,16 @@ function buildGestionTab(){
   var ps=activas.filter(function(c){return c.stage==='psic'||c.stage==='final';}).length;
   var fi=activas.filter(function(c){return c.stage==='final';}).length;
   var kpis='<div class="gest-summary"><div class="gest-kpi"><span class="kn">'+activas.length+'</span><span class="kl">En Ranking</span></div><div class="gest-kpi" style="border-top-color:#5a3fbf"><span class="kn" style="color:#5a3fbf">'+re+'</span><span class="kl">Entrevistadas</span></div><div class="gest-kpi" style="border-top-color:#2a8f9e"><span class="kn" style="color:#2a8f9e">'+ps+'</span><span class="kl">En Pruebas</span></div><div class="gest-kpi" style="border-top-color:var(--green)"><span class="kn" style="color:var(--green)">'+fi+'</span><span class="kl">Al Abogado</span></div></div>';
-  var ranked=activas.slice().sort(function(a,b){return composite(b)-composite(a);});
+  var ranked=activas.slice().sort(function(a,b){return rankScore(b)-rankScore(a);});
   var rows=ranked.length?ranked.map(function(c,i){
-    var cs=composite(c),csCl=cs>=75?'#2a7d44':cs>=55?'#b9842c':'#b5453f';
+    var pf=pondFinal(c);
+    var cs=rankScore(c),csCl=cs>=75?'#2a7d44':cs>=55?'#b9842c':'#b5453f';
     var medals=['🥇','🥈','🥉'];var medal=i<3?medals[i]:(i+1)+'.';
     var iv=c.interview||{},cv=c.cv||{},psic=c.psic||{};
     var stIcon=c.stage==='final'?'✅':c.stage==='psic'?'🧠':iv.done?'🗣':c.scheduled?'📅':'⏳';
-    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)"><span style="font-size:16px;min-width:26px">'+medal+'</span><span class="rank-item-name" style="flex:1;font-size:13px;font-weight:700" onclick="mostrarExplicacionRanking(\''+c.id+'\')">'+esc(c.nombre)+'</span><span>'+stIcon+'</span><span style="font-size:11px;color:var(--ink2)">CV:'+(cv.puntaje||0)+(iv.total!=null?' Ent:'+iv.total:'')+(psic.done?' Psico:'+esc(psic.recomendacion):'')+'</span><span style="font-family:Source Serif 4,serif;font-size:17px;font-weight:700;color:'+csCl+';min-width:32px;text-align:right">'+cs+'</span></div>';
+    return '<div style="display:flex;align-items:center;gap:10px;padding:10px 16px;border-bottom:1px solid var(--line)"><span style="font-size:16px;min-width:26px">'+medal+'</span><span class="rank-item-name" style="flex:1;font-size:13px;font-weight:700" onclick="mostrarExplicacionRanking(\''+c.id+'\')">'+esc(c.nombre)+'</span><span>'+stIcon+'</span><span style="font-size:11px;color:var(--ink2)">'+(pf!=null?'Ent:'+iv.total+' Psico:'+esc(psic.recomendacion):'CV:'+(cv.puntaje||0)+(iv.total!=null?' Ent:'+iv.total:''))+'</span><span style="font-family:Source Serif 4,serif;font-size:17px;font-weight:700;color:'+csCl+';min-width:32px;text-align:right">'+cs+'</span></div>';
   }).join(''):'<div style="padding:30px;text-align:center;color:var(--ink2);font-size:13px">Aun no hay candidatos en entrevista o etapas posteriores.</div>';
-  var rankBox='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px">Ranking General</h3><span style="font-size:11px;color:var(--ink2)">CV 20% · Ent. 50% · Psico 30%</span></div>'+rows+'</div>';
+  var rankBox='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px"><h3 style="font-size:15px">Ranking General</h3><span style="font-size:11px;color:var(--ink2)">Con pruebas: Ent. 60% · Psico 40% — sin pruebas: CV 20% · Ent. 50% · Psico 30%</span></div>'+rows+'</div>';
   return kpis+buildSkillsChart(ranked)+rankBox;
 }
 var SKILL_COLORS=['#2a78d6','#1baf7a','#eda100','#008300','#4a3aa7'];
@@ -1744,9 +1746,11 @@ window.mostrarExplicacionRanking=function(id){
   if(iv.done)partes.push('Entrevista ('+iv.total+'/100): '+(iv.verdictLabel||''));
   if(psic.done)partes.push('Pruebas psicometricas: '+psic.recomendacion+' — '+(psic.conclusion||''));
   if(cv.razonamientoDetallado)partes.push('Reevaluacion: '+cv.razonamientoDetallado);
+  var pf=pondFinal(c);
+  partes.push(pf!=null?'Puntaje ponderado: Entrevista 60% + Psicometricas 40%.':'Puntaje: CV 20% + Entrevista 50% + Psicometricas 30% (ponderado completo disponible cuando haya pruebas psicometricas).');
   var texto=partes.length?partes.join(' | '):'Sin informacion suficiente para explicar la calificacion todavia.';
   gid('modal-name').textContent=c.nombre+' — Por qué esta calificación';
-  gid('modal-body').innerHTML='<div class="modal-section"><div class="explain-box">'+esc(texto)+'</div><div style="margin-top:12px;text-align:right"><span style="font-family:Source Serif 4,serif;font-size:22px;font-weight:700">'+composite(c)+'</span><span style="font-size:11px;color:var(--ink2)"> / 100</span></div></div>';
+  gid('modal-body').innerHTML='<div class="modal-section"><div class="explain-box">'+esc(texto)+'</div><div style="margin-top:12px;text-align:right"><span style="font-family:Source Serif 4,serif;font-size:22px;font-weight:700">'+rankScore(c)+'</span><span style="font-size:11px;color:var(--ink2)"> / 100</span></div></div>';
   gid('modal-actions').innerHTML='<button class="btn sm ghost" onclick="openModal(\''+c.id+'\')">Ver informe completo</button>';
   gid('modal-overlay').classList.add('open');
 };
