@@ -365,10 +365,11 @@ h1,h2,h3,h4{font-family:'Source Serif 4',Georgia,serif;}
 /* ══ CONFIG ══ */
 var SB_URL='https://giyzroybmfokpswzxhoi.supabase.co';
 var SB_KEY='sb_publishable_158owxdQNNPbgKKptc96ww_1w7qk7rF';
-var USERS={
-  'salesavilalawconsulting@gmail.com':{pass:'MmAvilaLaw0715*',name:'Maria Monica'},
-  'miguel.avila@avilalawconsulting.com':{pass:'MaAvilaLaw1010*',name:'Dr. Avila'}
+var USER_NAMES={
+  'salesavilalawconsulting@gmail.com':'Maria Monica',
+  'miguel.avila@avilalawconsulting.com':'Dr. Avila'
 };
+var SB_ACCESS_TOKEN=null,SB_REFRESH_TOKEN=null;
 var DRIVE_FOLDER_DEFAULT='1AJfWY8Iw_SxGy4d7xQ3pVAS2mN4eCqJD';
 var AVILA_EMAIL_DEFAULT='miguel.avila@avilalawconsulting.com';
 
@@ -480,18 +481,46 @@ function pondFinal(c){
 function showSync(){var el=gid('sync-ind');if(el){el.classList.add('visible');setTimeout(function(){el.classList.remove('visible');},2000);}}
 
 /* ══ SUPABASE ══ */
+async function sbAuthLogin(email,pass){
+  var r=await fetch(SB_URL+'/auth/v1/token?grant_type=password',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({email:email,password:pass})});
+  if(!r.ok)return null;
+  return r.json();
+}
+async function sbAuthRefresh(refreshToken){
+  if(!refreshToken)return null;
+  var r=await fetch(SB_URL+'/auth/v1/token?grant_type=refresh_token',{method:'POST',headers:{'apikey':SB_KEY,'Content-Type':'application/json'},body:JSON.stringify({refresh_token:refreshToken})});
+  if(!r.ok)return null;
+  return r.json();
+}
+function sbPersistTokens(refreshToken){
+  try{var s=JSON.parse(localStorage.getItem('av_session')||'{}');s.refresh_token=refreshToken;localStorage.setItem('av_session',JSON.stringify(s));}catch(e){}
+}
+async function sbFetch(path,opts,_retried){
+  opts=opts||{};
+  var headers=Object.assign({},opts.headers||{},{'apikey':SB_KEY,'Authorization':'Bearer '+(SB_ACCESS_TOKEN||SB_KEY)});
+  var r=await fetch(SB_URL+path,Object.assign({},opts,{headers:headers}));
+  if(r.status===401&&!_retried&&SB_REFRESH_TOKEN){
+    var refreshed=await sbAuthRefresh(SB_REFRESH_TOKEN);
+    if(refreshed&&refreshed.access_token){
+      SB_ACCESS_TOKEN=refreshed.access_token;SB_REFRESH_TOKEN=refreshed.refresh_token;
+      sbPersistTokens(refreshed.refresh_token);
+      return sbFetch(path,opts,true);
+    }
+  }
+  return r;
+}
 async function sbGet(table){
-  var r=await fetch(SB_URL+'/rest/v1/'+table+'?select=*',{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  var r=await sbFetch('/rest/v1/'+table+'?select=*');
   if(!r.ok)throw new Error('Error cargando datos');
   return r.json();
 }
 async function sbUpsert(table,data){
-  var r=await fetch(SB_URL+'/rest/v1/'+table,{method:'POST',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY,'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify(data)});
+  var r=await sbFetch('/rest/v1/'+table,{method:'POST',headers:{'Content-Type':'application/json','Prefer':'resolution=merge-duplicates'},body:JSON.stringify(data)});
   if(!r.ok)throw new Error('Error guardando datos');
   showSync();
 }
 async function sbDelete(table,id){
-  await fetch(SB_URL+'/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE',headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+  await sbFetch('/rest/v1/'+table+'?id=eq.'+id,{method:'DELETE'});
 }
 
 async function cargarProcesos(){
@@ -662,15 +691,21 @@ window.analizarDesdeDrive=async function(fileId,fileName){
 };
 
 /* ══ LOGIN ══ */
-function doLogin(){
+async function doLogin(){
   var email=(gid('login-email').value||'').trim().toLowerCase();
   var pass=gid('login-pass').value||'';
-  var u=USERS[email];
   var errEl=gid('login-err');
-  if(!u||u.pass!==pass){errEl.style.display='block';return;}
+  var btn=document.querySelector('.login-btn');
+  if(btn){btn.disabled=true;btn.textContent='Ingresando...';}
+  var auth=await sbAuthLogin(email,pass).catch(function(){return null;});
+  if(btn){btn.disabled=false;btn.textContent='Ingresar';}
+  if(!auth||!auth.access_token){errEl.style.display='block';return;}
   errEl.style.display='none';
-  currentUser={email:email,name:u.name};
-  gid('user-badge').textContent=u.name;
+  SB_ACCESS_TOKEN=auth.access_token;SB_REFRESH_TOKEN=auth.refresh_token;
+  var name=USER_NAMES[email]||(auth.user&&auth.user.user_metadata&&auth.user.user_metadata.name)||email;
+  currentUser={email:email,name:name};
+  localStorage.setItem('av_session',JSON.stringify({refresh_token:auth.refresh_token,email:email,name:name}));
+  gid('user-badge').textContent=name;
   gid('login-wrap').style.display='none';
   gid('app').classList.add('visible');
   mostrarProcesos();
@@ -680,6 +715,8 @@ window.doLogin=doLogin;
 gid('login-pass').addEventListener('keydown',function(e){if(e.key==='Enter')doLogin();});
 
 function doLogout(){
+  SB_ACCESS_TOKEN=null;SB_REFRESH_TOKEN=null;
+  localStorage.removeItem('av_session');
   currentUser=null;currentProceso=null;cands=[];procesos=[];
   gid('app').classList.remove('visible');
   gid('login-wrap').style.display='flex';
@@ -1144,7 +1181,7 @@ window.descartarModal=function(id){
   (async function(){
     if(c.origenBancoId){
       try{
-        var r=await fetch(SB_URL+'/rest/v1/Candidatos?id=eq.'+c.origenBancoId,{headers:{'apikey':SB_KEY,'Authorization':'Bearer '+SB_KEY}});
+        var r=await sbFetch('/rest/v1/Candidatos?id=eq.'+c.origenBancoId);
         var rows=await r.json();
         if(rows[0]){
           var original=rows[0].data;
@@ -1765,23 +1802,28 @@ function render(){
 
 /* ══ INIT ══ */
 async function init(){
-  // Verificar si hay sesion activa en localStorage
+  // Verificar si hay sesion activa (renovando el token con Supabase Auth)
   var saved=localStorage.getItem('av_session');
-  if(saved){try{var s=JSON.parse(saved);if(USERS[s.email]){currentUser=s;gid('user-badge').textContent=s.name;gid('loading').style.display='none';gid('app').classList.add('visible');await mostrarProcesos();driveSetStatus();driveTryAutoConnect();initEmailJS();return;}}catch(e){}}
+  if(saved){
+    try{
+      var s=JSON.parse(saved);
+      var refreshed=await sbAuthRefresh(s.refresh_token);
+      if(refreshed&&refreshed.access_token){
+        SB_ACCESS_TOKEN=refreshed.access_token;SB_REFRESH_TOKEN=refreshed.refresh_token;
+        currentUser={email:s.email,name:s.name};
+        localStorage.setItem('av_session',JSON.stringify({refresh_token:refreshed.refresh_token,email:s.email,name:s.name}));
+        gid('user-badge').textContent=s.name;
+        gid('loading').style.display='none';
+        gid('app').classList.add('visible');
+        await mostrarProcesos();driveSetStatus();driveTryAutoConnect();initEmailJS();
+        return;
+      }
+    }catch(e){}
+    localStorage.removeItem('av_session');
+  }
   gid('loading').style.display='none';
   gid('login-wrap').style.display='flex';
 }
-
-// Guardar sesion al login
-var _origLogin=doLogin;
-window.doLogin=function(){
-  var email=(gid('login-email').value||'').trim().toLowerCase();
-  var pass=gid('login-pass').value||'';
-  var u=USERS[email];
-  if(u&&u.pass===pass){localStorage.setItem('av_session',JSON.stringify({email:email,name:u.name}));}
-  _origLogin();
-};
-window.doLogout=function(){localStorage.removeItem('av_session');doLogout();};
 
 init().catch(function(e){gid('loading').style.display='none';gid('login-wrap').style.display='flex';console.error(e);});
 
