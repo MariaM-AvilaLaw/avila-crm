@@ -989,7 +989,7 @@ function extractGeminiRetrySeconds(errBody){
   return null;
 }
 var RETRYABLE_STATUS={429:1,500:1,502:1,503:1,504:1,529:1};
-var GEMINI_FALLBACK_MODEL='gemini-2.0-flash';
+var GEMINI_FALLBACK_MODEL='gemini-3.6-flash';
 async function callGemini(msgs,max,_attempt,_model){
   _attempt=_attempt||1;
   _model=_model||'gemini-flash-latest';
