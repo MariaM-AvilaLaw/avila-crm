@@ -989,10 +989,12 @@ function extractGeminiRetrySeconds(errBody){
   return null;
 }
 var RETRYABLE_STATUS={429:1,500:1,502:1,503:1,504:1,529:1};
-async function callGemini(msgs,max,_attempt){
+var GEMINI_FALLBACK_MODEL='gemini-2.0-flash';
+async function callGemini(msgs,max,_attempt,_model){
   _attempt=_attempt||1;
+  _model=_model||'gemini-flash-latest';
   var contents=msgs.map(function(m){return{role:m.role==='assistant'?'model':'user',parts:anthropicBlocksToGeminiParts(m.content)};});
-  var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/gemini-flash-latest:generateContent?key='+encodeURIComponent(CFG.geminiKey),{
+  var r=await fetch('https://generativelanguage.googleapis.com/v1beta/models/'+_model+':generateContent?key='+encodeURIComponent(CFG.geminiKey),{
     method:'POST',headers:{'Content-Type':'application/json'},
     body:JSON.stringify({contents:contents,generationConfig:{maxOutputTokens:max||1500}})
   });
@@ -1001,7 +1003,10 @@ async function callGemini(msgs,max,_attempt){
     var errTxt=(errBody&&errBody.error&&errBody.error.message)||'';
     if(RETRYABLE_STATUS[r.status]&&_attempt<=2){
       var retrySec=r.status===429?(extractGeminiRetrySeconds(errBody)||10):(_attempt*8);
-      if(retrySec<=65){await sleepMs((retrySec+1)*1000);return callGemini(msgs,max,_attempt+1);}
+      if(retrySec<=65){await sleepMs((retrySec+1)*1000);return callGemini(msgs,max,_attempt+1,_model);}
+    }
+    if(RETRYABLE_STATUS[r.status]&&_model!==GEMINI_FALLBACK_MODEL){
+      return callGemini(msgs,max,1,GEMINI_FALLBACK_MODEL);
     }
     throw new Error('Gemini error '+r.status+(errTxt?': '+errTxt:''));
   }
