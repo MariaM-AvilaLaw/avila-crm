@@ -471,6 +471,12 @@ function composite(c){
   if(ent!=null)return Math.round(cv*0.35+ent*0.65);
   return cv;
 }
+function pondFinal(c){
+  var ent=(c.interview&&c.interview.total!=null)?c.interview.total:null;
+  var psic=null;if(c.psic&&c.psic.done){psic=c.psic.recomendacion==='Avanzar'?100:c.psic.recomendacion==='Revisar'?60:20;}
+  if(ent==null||psic==null)return null;
+  return Math.round(ent*0.6+psic*0.4);
+}
 function showSync(){var el=gid('sync-ind');if(el){el.classList.add('visible');setTimeout(function(){el.classList.remove('visible');},2000);}}
 
 /* ══ SUPABASE ══ */
@@ -1328,6 +1334,50 @@ window.reevaluarConIA=async function(id){
   }catch(e){alert('Error IA: '+e.message);if(btn){btn.disabled=false;btn.textContent='Reevaluar puntaje con IA';}}
 };
 
+/* ══ SINTESIS FINAL (entrevista + psicometricas) ══ */
+function buildSintesisFinalHtml(c){
+  var iv=c.interview||{},psic=c.psic||{},sf=c.sintesisFinal;
+  if(!iv.done||!psic.done){
+    return '<div class="history-item" style="font-size:12.5px;color:var(--ink2)">Falta completar la entrevista o las pruebas psicometricas para generar la sintesis final.</div>';
+  }
+  var btnLabel=sf&&sf.done?'🔄 Regenerar sintesis':'🧭 Generar sintesis final con IA';
+  var out='<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:'+(sf&&sf.done?'14px':'0')+'">'
+    +'<button class="btn sm gold" id="sintesis-btn" onclick="generarSintesisFinal(\''+c.id+'\')">'+btnLabel+'</button>'
+    +(sf&&sf.done?'<span style="font-size:11px;color:var(--ink2)">Generado: '+esc(sf.generadoEn||'')+'</span>':'')
+    +'</div><div id="sintesis-ld" style="font-size:13px;color:var(--ink2);margin-bottom:8px"></div>';
+  if(sf&&sf.done){
+    var pond=pondFinal(c);
+    var pc=pond!=null?(pond>=75?'var(--green)':pond>=55?'var(--amber)':'var(--red)'):'var(--ink2)';
+    var rc={Avanzar:'green',Revisar:'amber','No avanzar':'red'}[sf.recomendacionFinal]||'amber';
+    out+='<div style="display:flex;align-items:center;gap:14px;margin-bottom:12px;padding:12px;background:var(--cream);border-radius:8px">'
+      +'<div style="text-align:center"><span style="font-family:Source Serif 4,serif;font-size:30px;font-weight:700;color:'+pc+'">'+(pond!=null?pond:'—')+'</span><div style="font-size:10px;color:var(--ink2);text-transform:uppercase">Ponderado</div></div>'
+      +'<div style="font-size:11px;color:var(--ink2)">Entrevista 60% · Pruebas psicometricas 40%</div>'
+      +'<div style="margin-left:auto"><span class="badge '+rc+'" style="font-size:13px">'+esc(sf.recomendacionFinal||'')+'</span></div>'
+      +'</div>'
+      +'<div style="margin-bottom:12px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gold);margin-bottom:4px">Resumen de la persona</div><p style="font-size:13px;line-height:1.5">'+esc(sf.resumenPersona||'')+'</p></div>'
+      +'<div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:12px">'
+      +'<div style="flex:1 1 260px;padding:10px;border:1px solid var(--line);border-radius:8px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink2);margin-bottom:4px">🗣 Lo que muestra la entrevista</div><p style="font-size:12.5px;line-height:1.5">'+esc(sf.aspectoEntrevista||'')+'</p></div>'
+      +'<div style="flex:1 1 260px;padding:10px;border:1px solid var(--line);border-radius:8px"><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--ink2);margin-bottom:4px">🧠 Lo que muestran las pruebas</div><p style="font-size:12.5px;line-height:1.5">'+esc(sf.aspectoPsicometrico||'')+'</p></div>'
+      +'</div>'
+      +'<div><div style="font-size:11px;font-weight:700;text-transform:uppercase;color:var(--gold);margin-bottom:4px">Por que esta recomendacion</div><p style="font-size:13px;line-height:1.5">'+esc(sf.justificacionFinal||'')+'</p></div>';
+  }
+  return out;
+}
+window.generarSintesisFinal=async function(id){
+  var c=findCand(id);if(!c)return;
+  var iv=c.interview||{},psic=c.psic||{};
+  if(!iv.done||!psic.done){alert('Faltan la entrevista o las pruebas psicometricas.');return;}
+  var btn=gid('sintesis-btn'),ld=gid('sintesis-ld');if(btn)btn.disabled=true;if(ld)ld.textContent='Generando sintesis...';
+  try{
+    var prompt='Eres psicologo organizacional senior en Avila Law Consulting. Vas a redactar la sintesis final de "'+c.nombre+'" para el cargo de "'+(currentProceso&&currentProceso.cargo||'')+'", combinando el resultado de la entrevista de RRHH (peso 60%) y de las pruebas psicometricas (peso 40%).\n\nENTREVISTA (peso 60%):\nPuntaje: '+(iv.total!=null?iv.total:'N/A')+'/100\nResultado: '+(iv.verdictLabel||'')+'\nNotas del entrevistador: '+(iv.notes||'Sin notas')+'\n\nPRUEBAS PSICOMETRICAS (peso 40%):\nRecomendacion: '+(psic.recomendacion||'')+'\nConclusion: '+(psic.conclusion||'')+'\nJustificacion: '+(psic.justificacion||'')+'\n\nEscribe en espanol sencillo, sin tecnicismos ni codigos de pruebas (nada de letras o siglas de factores), como si le explicaras la decision a alguien sin formacion en psicologia. Responde UNICAMENTE con este JSON:\n{"resumenPersona":"3-4 frases describiendo a la persona en conjunto: quien es y como trabaja","aspectoEntrevista":"1-2 frases sobre lo que mostro especificamente en la entrevista","aspectoPsicometrico":"1-2 frases sobre lo que muestran especificamente las pruebas psicometricas","recomendacionFinal":"Avanzar|Revisar|No avanzar","justificacionFinal":"2-3 frases explicando la decision, ponderando ambos resultados"}';
+    var raw=await callAI([{role:'user',content:prompt}],1200);
+    var p=parseAIJson(raw);
+    c.sintesisFinal={done:true,generadoEn:nowStr(),resumenPersona:p.resumenPersona||'',aspectoEntrevista:p.aspectoEntrevista||'',aspectoPsicometrico:p.aspectoPsicometrico||'',recomendacionFinal:p.recomendacionFinal||'Revisar',justificacionFinal:p.justificacionFinal||''};
+    await guardarCandidato(c);
+    render();openModal(id);
+  }catch(e){alert('Error IA: '+e.message);if(btn){btn.disabled=false;btn.textContent=(c.sintesisFinal&&c.sintesisFinal.done)?'🔄 Regenerar sintesis':'🧭 Generar sintesis final con IA';}if(ld)ld.textContent='';}
+};
+
 /* ══ PDF ══ */
 function loadJsPDF(){
   return new Promise(function(res,rej){
@@ -1367,6 +1417,16 @@ function informeTexto(c){
     lines.push('— Pruebas Psicometricas —');
     lines.push('Recomendacion: '+psic.recomendacion+' | '+(psic.conclusion||''));
     lines.push('Justificacion: '+(psic.justificacion||''));
+    lines.push('');
+  }
+  if(c.sintesisFinal&&c.sintesisFinal.done){
+    var sf=c.sintesisFinal,pond=pondFinal(c);
+    lines.push('— Sintesis Final (Entrevista 60% + Pruebas Psicometricas 40%) —');
+    lines.push('Ponderado: '+(pond!=null?pond:'N/A')+' | Recomendacion final: '+sf.recomendacionFinal);
+    lines.push('Resumen de la persona: '+sf.resumenPersona);
+    lines.push('Lo que muestra la entrevista: '+sf.aspectoEntrevista);
+    lines.push('Lo que muestran las pruebas: '+sf.aspectoPsicometrico);
+    lines.push('Por que esta recomendacion: '+sf.justificacionFinal);
     lines.push('');
   }
   if(c.notasFinales){lines.push('— Notas del Entrevistador (Informe Final) —');lines.push(c.notasFinales);lines.push('');}
@@ -1657,6 +1717,7 @@ window.openModal=function(id){
     +((c.historialReeval&&c.historialReeval.length)?'<div class="mini-hist"><b>Historial de reevaluaciones:</b>'+c.historialReeval.map(function(h){return '<div style="margin-top:4px">'+esc(h.fecha)+' — '+h.puntajeAnterior+' → '+h.puntajeNuevo+'</div>';}).join('')+'</div>':'')
     +'</div></div>';
   if(c.stage==='final'){
+    body+='<div class="modal-section"><div class="modal-section-title">Sintesis Final (IA) — Entrevista + Pruebas Psicometricas</div><div class="history-item">'+buildSintesisFinalHtml(c)+'</div></div>';
     body+='<div class="modal-section"><div class="modal-section-title">Notas del entrevistador (Informe Final)</div><div class="history-item">'
       +'<textarea class="notes-box" id="notes-final" placeholder="Notas finales del entrevistador para la decisión...">'+esc(c.notasFinales||'')+'</textarea>'
       +'<div style="margin-top:8px"><button class="btn sm" onclick="guardarNotasFinales(\''+c.id+'\')">Guardar notas finales</button></div>'
