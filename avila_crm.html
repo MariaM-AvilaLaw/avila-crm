@@ -1273,8 +1273,30 @@ function buildPsicForm(){
     }
     return '<div class="psic-row" style="padding:10px;background:var(--cream);border-radius:7px;margin-bottom:8px"><div style="display:flex;align-items:center;gap:10px"><b style="min-width:140px;font-size:13.5px">'+t+'</b><input type="file" accept=".pdf,.png,.jpg,.jpeg" onchange="onPsicFile(\''+t+'\',this)"></div>'+linkArea+'</div>';
   }).join('');
-  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button class="btn ghost sm" onclick="goBackFromForm()">← Volver</button></div><div class="card"><h2>Pruebas Psicometricas</h2><p style="font-size:13px;color:var(--ink2);margin-top:4px">'+esc(c.nombre)+' - '+nowStr()+'</p><div style="margin-top:8px;font-size:13px">CV: '+(c.cv&&c.cv.puntaje||0)+'/100 | Entrevista: '+(iv.total||0)+'/100 | '+esc(iv.verdictLabel||'')+'</div></div><div class="card"><h4 style="font-size:15px;margin-bottom:12px">Subir resultados de pruebas (archivo o link de Drive)</h4>'+uploads+'<div style="display:flex;gap:10px;margin-top:14px"><button class="btn gold" id="psic-btn" onclick="analizarPruebas(\''+c.id+'\')">Analizar con IA</button></div><div id="psic-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>'+results;
+  var manualOpen=!!psicManualEditing[c.id];
+  var manual='<div class="card"><div style="display:flex;justify-content:space-between;align-items:center"><h4 style="font-size:15px">Cargar resultado manualmente</h4><button class="btn ghost sm" onclick="togglePsicManual(\''+c.id+'\')">'+(manualOpen?'Cancelar':'✏️ Escribir resultado')+'</button></div>'
+    +(manualOpen?('<p style="font-size:12px;color:var(--ink2);margin:8px 0">Usa esto si ya tienes la conclusion redactada (por ejemplo, un analisis hecho fuera del CRM).</p>'
+      +'<div class="field"><label>Recomendacion</label><select id="psic-man-rec" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--cream)"><option value="Avanzar">Avanzar</option><option value="Revisar">Revisar</option><option value="No avanzar">No avanzar</option></select></div>'
+      +'<div class="field" style="margin-top:8px"><label>Conclusion (una frase corta)</label><textarea id="psic-man-conc" rows="2" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--cream)"></textarea></div>'
+      +'<div class="field" style="margin-top:8px"><label>Justificacion</label><textarea id="psic-man-just" rows="4" style="width:100%;padding:8px;border:1px solid var(--line);border-radius:6px;font-size:13px;background:var(--cream)"></textarea></div>'
+      +'<button class="btn gold sm" style="margin-top:10px" onclick="guardarPsicManual(\''+c.id+'\')">Guardar resultado</button>'):'')
+    +'</div>';
+  return '<div style="display:flex;align-items:center;gap:10px;margin-bottom:16px"><button class="btn ghost sm" onclick="goBackFromForm()">← Volver</button></div><div class="card"><h2>Pruebas Psicometricas</h2><p style="font-size:13px;color:var(--ink2);margin-top:4px">'+esc(c.nombre)+' - '+nowStr()+'</p><div style="margin-top:8px;font-size:13px">CV: '+(c.cv&&c.cv.puntaje||0)+'/100 | Entrevista: '+(iv.total||0)+'/100 | '+esc(iv.verdictLabel||'')+'</div></div><div class="card"><h4 style="font-size:15px;margin-bottom:12px">Subir resultados de pruebas (archivo o link de Drive)</h4>'+uploads+'<div style="display:flex;gap:10px;margin-top:14px"><button class="btn gold" id="psic-btn" onclick="analizarPruebas(\''+c.id+'\')">Analizar con IA</button></div><div id="psic-ld" style="font-size:13px;color:var(--ink2);margin-top:8px"></div></div>'+manual+results;
 }
+var psicManualEditing={};
+window.togglePsicManual=function(id){psicManualEditing[id]=!psicManualEditing[id];render();};
+window.guardarPsicManual=async function(id){
+  var c=findCand(id);if(!c)return;
+  var rec=(gid('psic-man-rec')&&gid('psic-man-rec').value)||'Revisar';
+  var conc=(gid('psic-man-conc')&&gid('psic-man-conc').value.trim())||'';
+  var just=(gid('psic-man-just')&&gid('psic-man-just').value.trim())||'';
+  if(!conc||!just){alert('Completa la conclusion y la justificacion.');return;}
+  c.psic={done:true,analizadoEn:nowStr(),tests:[],conclusion:conc,recomendacion:rec,justificacion:just,links:(c.psic&&c.psic.links)||{}};
+  if(c.stage==='cv'||c.stage==='interview')c.stage='psic';
+  delete psicManualEditing[id];
+  await guardarCandidato(c);
+  tab='pipeline';formId=null;render();
+};
 window.onPsicFile=function(t,inp){if(inp.files&&inp.files[0])psicFiles[t]=inp.files[0];};
 window.onPsicLink=function(t,inp){var v=inp.value.trim();if(v)psicLinks[t]=v;else delete psicLinks[t];};
 window.editarPsicLink=function(t){psicLinkEditing[t]=true;render();};
@@ -1305,7 +1327,7 @@ window.analizarPruebas=async function(id){
     }catch(e){}
   }
   if(!blocks.length){if(btn)btn.disabled=false;if(ld)ld.textContent='';alert('No se pudo leer ningun archivo o link.');return;}
-  blocks.push({type:'text',text:'Eres psicologo organizacional. Evaluas resultados psicometricos de '+c.nombre+' para el cargo en Avila Law Consulting. Responde UNICAMENTE con JSON:\n{"tests":[{"nombre":"...","interpretacion":"...","fortalezas":["..."],"riesgos":["..."],"adecuacion":"Alta|Media|Baja"}],"conclusion":"...","recomendacion":"Avanzar|Revisar|No avanzar","justificacion":"..."}'});
+  blocks.push({type:'text',text:'Eres psicologo organizacional. Evaluas resultados psicometricos de '+c.nombre+' para el cargo en Avila Law Consulting. Escribe "conclusion" y "justificacion" en espanol sencillo, sin tecnicismos ni codigos o letras de los factores de la prueba (nunca escribas cosas como "D=3" o "W=7"), como si le explicaras el resultado a alguien sin formacion en psicologia. Responde UNICAMENTE con JSON:\n{"tests":[{"nombre":"...","interpretacion":"...","fortalezas":["..."],"riesgos":["..."],"adecuacion":"Alta|Media|Baja"}],"conclusion":"...","recomendacion":"Avanzar|Revisar|No avanzar","justificacion":"..."}'});
   try{
     var raw=await callAI([{role:'user',content:blocks}],2000);
     var p=parseAIJson(raw);
@@ -1412,7 +1434,7 @@ window.generarSintesisFinal=async function(id){
   if(!iv.done||!psic.done){alert('Faltan la entrevista o las pruebas psicometricas.');return;}
   var btn=gid('sintesis-btn'),ld=gid('sintesis-ld');if(btn)btn.disabled=true;if(ld)ld.textContent='Generando sintesis...';
   try{
-    var prompt='Eres psicologo organizacional senior en Avila Law Consulting. Vas a redactar la sintesis final de "'+c.nombre+'" para el cargo de "'+(currentProceso&&currentProceso.cargo||'')+'", combinando el resultado de la entrevista de RRHH (peso 60%) y de las pruebas psicometricas (peso 40%).\n\nENTREVISTA (peso 60%):\nPuntaje: '+(iv.total!=null?iv.total:'N/A')+'/100\nResultado: '+(iv.verdictLabel||'')+'\nNotas del entrevistador: '+(iv.notes||'Sin notas')+'\n\nPRUEBAS PSICOMETRICAS (peso 40%):\nRecomendacion: '+(psic.recomendacion||'')+'\nConclusion: '+(psic.conclusion||'')+'\nJustificacion: '+(psic.justificacion||'')+'\n\nEscribe en espanol sencillo, sin tecnicismos ni codigos de pruebas (nada de letras o siglas de factores), como si le explicaras la decision a alguien sin formacion en psicologia. Se breve: cada campo de texto debe tener como maximo 2-3 frases cortas. Responde UNICAMENTE con este JSON, en este orden exacto de campos, sin texto antes ni despues:\n{"recomendacionFinal":"Avanzar|Revisar|No avanzar","justificacionFinal":"maximo 3 frases explicando la decision, ponderando ambos resultados","resumenPersona":"maximo 3 frases describiendo a la persona en conjunto: quien es y como trabaja","aspectoEntrevista":"maximo 2 frases sobre lo que mostro especificamente en la entrevista","aspectoPsicometrico":"maximo 2 frases sobre lo que muestran especificamente las pruebas psicometricas"}';
+    var prompt='Eres psicologo organizacional senior en Avila Law Consulting. Vas a redactar la sintesis final de "'+c.nombre+'" para el cargo de "'+(currentProceso&&currentProceso.cargo||'')+'", combinando el resultado de la entrevista de RRHH (peso 60%) y de las pruebas psicometricas (peso 40%).\n\nIMPORTANTE: '+c.nombre+' sigue activo(a) en el proceso de seleccion en este momento y NO ha sido descartado(a), rechazado(a) ni eliminado(a) — nunca escribas que fue descartado(a) o que no avanzo. Usa UNICAMENTE la informacion entregada abajo; no inventes datos, hechos, requisitos incumplidos ni antecedentes que no esten explicitamente incluidos aqui.\n\nENTREVISTA (peso 60%):\nPuntaje: '+(iv.total!=null?iv.total:'N/A')+'/100\nResultado: '+(iv.verdictLabel||'')+'\nNotas del entrevistador: '+(iv.notes||'Sin notas')+'\n\nPRUEBAS PSICOMETRICAS (peso 40%):\nRecomendacion: '+(psic.recomendacion||'')+'\nConclusion: '+(psic.conclusion||'')+'\nJustificacion: '+(psic.justificacion||'')+'\n\nEscribe en espanol sencillo, sin tecnicismos ni codigos de pruebas (nada de letras o siglas de factores), como si le explicaras la decision a alguien sin formacion en psicologia. Se breve: cada campo de texto debe tener como maximo 2-3 frases cortas. Responde UNICAMENTE con este JSON, en este orden exacto de campos, sin texto antes ni despues:\n{"recomendacionFinal":"Avanzar|Revisar|No avanzar","justificacionFinal":"maximo 3 frases explicando la decision, ponderando ambos resultados","resumenPersona":"maximo 3 frases describiendo a la persona en conjunto: quien es y como trabaja","aspectoEntrevista":"maximo 2 frases sobre lo que mostro especificamente en la entrevista","aspectoPsicometrico":"maximo 2 frases sobre lo que muestran especificamente las pruebas psicometricas"}';
     var raw=await callAI([{role:'user',content:prompt}],2200);
     var p=parseAIJson(raw);
     c.sintesisFinal={done:true,generadoEn:nowStr(),resumenPersona:p.resumenPersona||'',aspectoEntrevista:p.aspectoEntrevista||'',aspectoPsicometrico:p.aspectoPsicometrico||'',recomendacionFinal:p.recomendacionFinal||'Revisar',justificacionFinal:p.justificacionFinal||''};
@@ -1772,7 +1794,7 @@ window.openModal=function(id){
   else{
     if(c.stage==='cv')acts+='<button class="btn sm green" onclick="citarCandidato(\''+c.id+'\')">Citar</button>';
     if(c.stage!=='cv'){acts+='<button class="btn sm" onclick="closeModalDirect();openInterviewForm(\''+c.id+'\')">'+( iv.done?'Ver entrevista':'Realizar entrevista')+'</button>';if(c.stage==='interview'&&iv.done&&(iv.verdict==='apto'||iv.verdict==='reservas'))acts+='<button class="btn sm green" onclick="enviarAPsic(\''+c.id+'\')">Pruebas Psico</button>';}
-    if(c.stage==='psic'||c.stage==='final'){acts+='<button class="btn sm" onclick="closeModalDirect();openPsicForm(\''+c.id+'\')">'+( psic.done?'Ver pruebas':'Cargar pruebas')+'</button>';if(c.stage==='psic'&&psic.done&&psic.recomendacion==='Avanzar')acts+='<button class="btn sm green" onclick="enviarAFinal(\''+c.id+'\')">Informe Final</button>';}
+    if(c.stage==='psic'||c.stage==='final'||(c.stage==='interview'&&iv.done)){acts+='<button class="btn sm" onclick="closeModalDirect();openPsicForm(\''+c.id+'\')">'+( psic.done?'Ver pruebas':'Cargar pruebas')+'</button>';if(c.stage==='psic'&&psic.done&&psic.recomendacion==='Avanzar')acts+='<button class="btn sm green" onclick="enviarAFinal(\''+c.id+'\')">Informe Final</button>';}
     if(c.stage!=='cv')acts+='<button class="btn sm" style="background:var(--red)" onclick="descartarModal(\''+c.id+'\')">Descalificar</button>';
   }
   if(cv.telefono)acts+='<a class="btn sm wa-btn" href="'+waLink(cv.telefono,waMensajePorEtapa(c))+'" target="_blank" rel="noopener">💬 WhatsApp</a>';
